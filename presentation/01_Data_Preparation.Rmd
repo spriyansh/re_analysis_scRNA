@@ -1,0 +1,183 @@
+---
+title: "Analysis of Setty et al."
+subtitle: "Data Preparation"
+author: "Priyansh Srivastava"
+date: "`r Sys.Date()`"
+output:
+    ioslides_presentation:
+        widescreen: false
+        incremental: true
+        css: css/Data_Preparation.css
+                
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+suppressPackageStartupMessages(library(shiny))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(rhdf5))
+```
+
+## <span style="color: #000000;">Outline</span>
+
+- <b>Brief description of the study.</b>
+
+- <b>Methods,</b>
+<ul>
+  <li>About the dataset</li>
+  <li>Sequencing</li>
+</ul>
+
+- <b>Data Exploration,</b>
+<ul>
+  <li>How to download data</li>
+  <li>Basic Exploration</li>
+</ul>
+
+- <b>Trajectory Analysis,</b>
+<ul>
+  <li>From the Article</li>
+  <li>Monocle3</li>
+  <li>Slingshot</li>
+</ul>
+
+## <span style="color: #000000;">About the Study</span>
+
+<p class="p_tags"><strong>Title:</strong> Characterization of cell fate probabilities in single-cell data with Palantir.</p>
+
+<p class="p_tags"><strong>Authors:</strong> Manu Setty, Vaidotas Kiseliovas, Jacob Levine, Adam Gayoso, Linas Mazutis & Dana Pe'er.</p>
+
+<p class="p_tags"><strong>Journal:</strong> Nature Biotechnology.</p>
+
+<p class="p_tags"><strong>Date/Year:</strong> $18^{th}$ September 2019</p>
+
+<p class="p_tags"><strong>Main Ideas:</strong></p>
+
+- <p class="bullets">Addressed discrete versus continuous nature of both differentiation and cell fate.</p>
+- <p class="bullets">Present an algorithm "<strong>Palantir</strong>" that models trajectories of differentiating cells by treating cell fate as a probabilistic process and leverages entropy to measure cell plasticity along the trajectory.</p>
+- <p class="bullets">Performance of Palantir "<strong>human bone marrow single-cell RNA sequencing data</strong>".</p>
+- <p class="bullets">Comparison of Palantir with pre-existing trajectory inference tools.</p>
+
+# About the dataset
+
+## <span style="color: #000000;">Experimental Setup</span>
+
+
+```{r, echo=FALSE, "Data-prep"}
+# Read raw metadata
+metadata1 <- read.csv("../datasets/setty_et_al/metadata.tsv", sep = "\t")
+metadata2 <- read.csv("../datasets/setty_et_al/cell_type.csv", sep = ",")
+metadata <- merge(metadata2, metadata1, "cell_suspension.biomaterial_core.biomaterial_id")
+
+# Select the columns of Interest
+metadata.clean <- metadata[,c("cell_suspension.biomaterial_core.biomaterial_id",
+                              "annotated_cell_identity.text",
+                              "annotated_cell_identity.ontology",
+                              "barcode", "donor_organism.sex",
+                              "donor_organism.biomaterial_core.biomaterial_id",
+                              "donor_organism.organism_age") ,drop = F]
+
+# Independently dividing replicates
+metadata.rep1 <- metadata.clean[metadata.clean$donor_organism.biomaterial_core.biomaterial_id == "HS_BM_1", ]
+metadata.rep2 <- metadata.clean[metadata.clean$donor_organism.biomaterial_core.biomaterial_id == "HS_BM_2", ]
+metadata.rep3 <- metadata.clean[metadata.clean$donor_organism.biomaterial_core.biomaterial_id == "HS_BM_3", ]
+
+# Remove duplicates if any
+metadata.rep1 <- metadata.rep1[!duplicated(metadata.rep1),]
+metadata.rep2 <- metadata.rep2[!duplicated(metadata.rep2),]
+metadata.rep3 <- metadata.rep3[!duplicated(metadata.rep3),]
+
+# rename list
+metadata.list <- list(metadata.rep1 = metadata.rep1, 
+                      metadata.rep2 = metadata.rep2,
+                      metadata.rep3 = metadata.rep3)
+
+# Renaming columns 
+metadata.list <- lapply(metadata.list, function(X){
+    colnames(X) <- c("biomaterial_id", "cell_identity", "cell_identity_ontology",
+                     "barcode", "sex", "id", "age")
+        return(X)
+})
+```
+
+## <span style="color: #000000;">CD34$^{+}$ Human Bone Marrow Cells</span>
+
+- <p class="bullets2">Cryopreserved bone marrow stem/progenitor CD34$^{+}$ cells from healthy donors were purchased from <strong>AllCells LLC</strong>.</p>
+\
+- <p class="bullets2">scRNA-Seq was performed with <strong>10X</strong> Genomics System.</p>
+\
+- <p class="bullets2"><strong>Single Cell 3'</strong> Library and <strong>Gel Bead kit V2</strong> was used for library preparation.</p>
+\
+- <p class="bullets2">Briefly, <strong>8,700 cells</strong> (viability 90–97%) were loaded per reaction, targeting recovery of <strong>5,000 cells</strong> with <strong>3.9% multiplet rate</strong>.</p>
+\
+- <p class="bullets2"><strong>12 cycles of PCR amplification, per cell</strong>.</p>
+\
+- <p class="bullets2">Sequenced on an <strong>Illumina HiSeq 2500 system</strong> (HiSeq SBS V4 chemistry kit).</p>
+
+---
+
+
+```{r, echo=FALSE}
+# Clean the Metadata file
+shinyApp(
+  ui = fluidPage(
+    radioButtons(inputId = "replicate", inline = TRUE,
+                 label = "Select Replicate:",
+                 choices = c("Donor-1" = "metadata.rep1",
+                             "Donor-2" = "metadata.rep2",
+                             "Donor-3" = "metadata.rep3")
+                 ),
+    p("-Number of Cells", span(textOutput(outputId = "nCells", inline=T), style="color:blue")),
+    p("-Age of Donor", span(textOutput(outputId = "age", inline=T), style="color:blue")),
+    p("-Sex of Donor", span(textOutput(outputId = "sex", inline=T), style="color:blue")),
+    h5("Cell types"), plotOutput("cellTypesPlot", width = "100%",height = "300px")
+  ),
+  server = function(input, output) {
+      # Number of Cells
+      output$nCells = renderText({
+          nCells <- nrow(metadata.list[[input$replicate]])
+          return(nCells)
+          })
+      
+      # Age of Donor
+      output$age = renderText({
+          age <- unique(metadata.list[[input$replicate]][["age"]])
+          return(age)
+          })
+      
+      # Age of Donor
+      output$sex = renderText({
+          sex <- unique(metadata.list[[input$replicate]][["sex"]])
+          return(sex)
+          })
+      
+      # Cell types
+      output$cellTypesPlot = renderPlot({
+          cellTypesPlotData <- metadata.list[[input$replicate]]
+          cellTypesPlot <- ggplot(cellTypesPlotData,
+                                  aes(x=cell_identity,  fill = cell_identity)) + geom_bar() + theme_classic()  + theme(legend.position = "none", axis.text.x = element_text(size = 12, angle = 45,vjust = 1, hjust=1), axis.text.y = element_text(size = 12), axis.title = element_text(size = 12)) + xlab("Cell Types") +ylab("Number of Cells") + coord_flip()
+          
+          return(cellTypesPlot)
+          })
+      
+  })
+
+```
+
+```{r}
+
+h5ls("datasets/setty_et_al/human_cd34_bm_rep1.h5ad")
+
+data = h5read("datasets/setty_et_al/human_cd34_bm_rep1.h5ad","/raw.X/data")
+indices = h5read("datasets/setty_et_al/human_cd34_bm_rep1.h5ad","/raw.X/indices")
+indptr = h5read("datasets/setty_et_al/human_cd34_bm_rep1.h5ad","/raw.X/indptr")
+
+obs <-  h5read("datasets/setty_et_al/human_cd34_bm_rep1.h5ad","/obs")
+obs <-  h5read("datasets/setty_et_al/human_cd34_bm_rep1.h5ad","/raw.var")
+
+```
+
+
+
+
