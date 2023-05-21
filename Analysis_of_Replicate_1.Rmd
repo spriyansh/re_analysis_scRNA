@@ -1,0 +1,187 @@
+---
+title: "Analysis Replicate 1"
+author: "Priyansh Srivastava"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, "Load required libraries"}
+suppressPackageStartupMessages(library(SingleCellExperiment))
+suppressPackageStartupMessages(library(Seurat))
+suppressPackageStartupMessages(library(rhdf5))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(biomaRt))
+suppressPackageStartupMessages(library(SeuratDisk))
+```
+
+```{r, "1. Load Different Data"}
+# Load Counts
+s.filt.mtx <- Read10X_h5("../../scRNASeqData/setty_et_al/raw_fq/rep1/rep1/outs/filtered_feature_bc_matrix.h5")
+s.filt.mtx[c(1:3),c(1:3)]
+
+# Renaming the features
+s.filt.mtx@Dimnames[[1]] <- stringr::str_replace(s.filt.mtx@Dimnames[[1]], "_", "-")
+```
+
+```{r, "2. Create Object"}
+# Create Seurat Object
+rep1.sob <- CreateSeuratObject(counts = s.filt.mtx, min.cells = 200,
+                               min.features = 1000, project = "rep1") 
+rep1.sob
+```
+
+```{r, "3. QC"}
+rep1.sob[["percent.mt"]] <- PercentageFeatureSet(rep1.sob, pattern = "^MT-")
+
+
+png("images_pres/01_before_pre-process.png", width = 1600, height = 900)
+nFeature_RNA.plt <- VlnPlot(rep1.sob, features = c("nFeature_RNA")) + theme(title = element_text(size = 30), axis.text = element_text(size = 30), legend.position = "none")
+nCount_RNA.plt <- VlnPlot(rep1.sob, features = c("nCount_RNA")) + theme(title = element_text(size = 30), axis.text = element_text(size = 30), legend.position = "none")
+percent.mt.plt <- VlnPlot(rep1.sob, features = c("percent.mt")) + theme(title = element_text(size = 30), axis.text = element_text(size = 30), legend.position = "none")
+ggpubr::ggarrange(nFeature_RNA.plt, nCount_RNA.plt, percent.mt.plt, ncol = 3)
+dev.off()
+
+png("images_pres/02_before_pre-process.png", width = 900, height = 1600)
+plot1 <- FeatureScatter(rep1.sob, feature1 = "nCount_RNA", feature2 = "percent.mt")+ theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.position = "none")
+plot2 <- FeatureScatter(rep1.sob, feature1 = "nCount_RNA", feature2 = "nFeature_RNA") + geom_smooth(method = "lm", formula = "y~x")+ theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.position = "none")
+ggpubr::ggarrange(plot1, plot2, ncol = 1)
+dev.off()
+
+```
+
+```{r, "4. Subset"}
+rep1.sob.sub <- subset(rep1.sob, 
+                       subset = nFeature_RNA > 200 &
+                           nCount_RNA < 30000 & percent.mt < 5)
+png("images_pres/01_after_pre-process.png", width = 1600, height = 900)
+nFeature_RNA.plt <- VlnPlot(rep1.sob.sub, features = c("nFeature_RNA")) + theme(title = element_text(size = 30), axis.text = element_text(size = 30), legend.position = "none")
+nCount_RNA.plt <- VlnPlot(rep1.sob.sub, features = c("nCount_RNA")) + theme(title = element_text(size = 30), axis.text = element_text(size = 30), legend.position = "none")
+percent.mt.plt <- VlnPlot(rep1.sob.sub, features = c("percent.mt")) + theme(title = element_text(size = 30), axis.text = element_text(size = 30), legend.position = "none")
+ggpubr::ggarrange(nFeature_RNA.plt, nCount_RNA.plt, percent.mt.plt, ncol = 3)
+dev.off()
+
+png("images_pres/02_after_pre-process.png", width = 900, height = 1600)
+plot1 <- FeatureScatter(rep1.sob.sub, feature1 = "nCount_RNA", feature2 = "percent.mt")+ theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.position = "none")
+plot2 <- FeatureScatter(rep1.sob.sub, feature1 = "nCount_RNA", feature2 = "nFeature_RNA") + geom_smooth(method = "lm", formula = "y~x")+ theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.position = "none")
+ggpubr::ggarrange(plot1, plot2, ncol = 1)
+dev.off()
+
+```
+
+```{r, "5. Normalization"}
+rep1.sob.sub <- NormalizeData(rep1.sob.sub)
+rep1.sob.sub <- FindVariableFeatures(rep1.sob.sub, selection.method = "vst")
+rep1.sob.sub <- ScaleData(rep1.sob.sub, features = rownames(rep1.sob.sub))
+```
+
+```{r, "6. PCA"}
+rep1.sob.sub <- RunPCA(rep1.sob.sub, features = VariableFeatures(rep1.sob.sub))
+DimPlot(rep1.sob.sub, reduction = "pca")
+DimHeatmap(rep1.sob.sub, dims = 1:15, cells = 500, balanced = T)
+ElbowPlot(rep1.sob.sub, ndims = 50)
+```
+
+```{r, "6. Regress Out cell Cycle effects"}
+# Download Cell cycle Scores
+# ensembl = useMart("ensembl",dataset="hsapiens_gene_ensembl") #uses human ensembl annotations
+# gene.data <- getBM(attributes=c('hgnc_symbol', 'ensembl_gene_id', 'go_id'),
+#                    filters = 'go', values = c("GO:0000087", "GO:0006260", "GO:0048285", "GO:0000279", "GO:0007059"), mart = ensembl)
+# saveRDS(as.data.frame(gene.data), "../../scRNASeqData/setty_et_al/cell_cycle_data.mart")
+
+# Read Mart Data
+biomart.anno <- readRDS("../../scRNASeqData/setty_et_al/cell_cycle_data.mart")
+
+# Check how many genes are present in the dataset
+reg.out.cc <- unique(biomart.anno$hgnc_symbol)
+indata <- rownames(rep1.sob.sub)[rownames(rep1.sob.sub) %in% reg.out.cc]
+length(indata)/length(reg.out.cc)
+
+# Keep only those which are present in data
+biomart.anno <- biomart.anno[biomart.anno$hgnc_symbol %in% indata,]
+
+# For seurat we need to divide genes into vectors
+s.genes <- unique(biomart.anno[biomart.anno$go_id %in% c("GO:0006260"), "hgnc_symbol"])
+g2m.genes <- unique(biomart.anno[biomart.anno$go_id %in% c("GO:0000087", "GO:0000279", "GO:0007059", "GO:0048285"), "hgnc_symbol"])
+
+# Cell Cycle Scores
+rep1.sob.sub.ccs <- CellCycleScoring(rep1.sob.sub, 
+                                     s.features = s.genes,
+                                     g2m.features = g2m.genes,
+                                     set.ident = TRUE)
+
+# Visualize the distribution of cell cycle markers across
+RidgePlot(rep1.sob.sub.ccs, features = c("PCNA", "TOP2A", "MCM6", "MKI67"), ncol = 2)
+
+# Checking Separation by cell-cycle genes
+rep1.sob.sub.ccs <- RunPCA(rep1.sob.sub.ccs, features = c(s.genes, g2m.genes))
+DimPlot(rep1.sob.sub.ccs)
+
+rep1.sob.sub.ccs <- ScaleData(rep1.sob.sub.ccs, vars.to.regress = c("S.Score", "G2M.Score"), features = rownames(rep1.sob.sub.ccs))
+
+rep1.sob.sub.ccs <- RunPCA(rep1.sob.sub.ccs, features = VariableFeatures(rep1.sob.sub.ccs), nfeatures.print = 10)
+DimPlot(rep1.sob.sub.ccs)
+```
+
+---
+
+```{r}
+# Read Raw Data
+s.cc.r <- readRDS("to_garnaxta/rep1_data/processed_data/rep1.sub.pca.cc.removed.RDS")
+SaveH5Seurat(bm, overwrite = TRUE,filename = "to_garnaxta/rep1_data/processed_data/rep1.processed.anno")
+
+# Data 
+pca.plr <- readRDS("to_garnaxta/rep1_data/processed_data/rep1.sub.pca.cc.removed.RDS")
+
+png("images_pres/01_Basic_PCA_CC_removed.png", width = 1600, height = 1600)
+DimPlot(pca.plr, pt.size = 2)+ theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.position = "none")
+dev.off()
+```
+
+```{r}
+# Begin Label Transfer
+suppressPackageStartupMessages(library(Azimuth))
+suppressPackageStartupMessages(library(SeuratData))
+
+bm <- RunAzimuth(query = "to_garnaxta/rep1_data/processed_data/rep1.sub.pca.cc.removed.H5.h5seurat", reference = "to_garnaxta/rep1_data/processed_data/bm_reference/")
+
+png("images_pres/Azimuth_Scores.png", width = 1200, height = 1200)
+VlnPlot(bm, features = "predicted.celltype.l2.score") + NoLegend() + theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.position = "none")
+dev.off()
+
+p3 <- VlnPlot(bm, features = "predicted.celltype.l2.score") + NoLegend()
+(p1 + p2)/p3
+
+```
+
+# Downsampling
+```{r}
+hist(bm@meta.data$mapping.score)
+abline(v = 0.75, col = "red")
+
+cell.meta <- as.data.frame(bm@meta.data)
+
+cell.meta <- cell.meta[cell.meta$mapping.score >= 0.75, ]
+
+table(cell.meta$predicted.celltype.l2)
+
+cell.meta.sub <- cell.meta[cell.meta$predicted.celltype.l2 %in% c("CLP",
+                                                                  "Early Eryth",
+                                                                  "EMP", "GMP", "HSC",
+                                                                  "Late Eryth","LMPP",
+                                                                  "pDC", "Prog Mk", "pre-mDC",
+                                                                  "pre-pDC"), ]
+table(cell.meta.sub$predicted.celltype.l2)
+
+norm.data <- bm@assays$RNA@data
+cell.meta.sub
+
+norm.data <- norm.data[, colnames(norm.data) %in% rownames(cell.meta.sub)]
+
+saveRDS(list(norm.data = norm.data, cell.meta.sub = cell.meta.sub),file = "to_garnaxta/rep1_data/processed_data/SlingshotInput")
+
+
+```
