@@ -1,0 +1,54 @@
+[1] "rep1_raw_fbc_mat.h5"
+[1] "rep1_filtered_fbc_mat.h5"
+
+Check-1 (rep1): All Genes exist
+
+Check-2 (rep1): All Genes exist
+Modularity Optimizer version 1.3.0 by Ludo Waltman and Nees Jan van Eck
+
+Number of nodes: 6340
+Number of edges: 206509
+
+Running Louvain algorithm...
+Maximum modularity in 10 random starts: 0.8558
+Number of communities: 14
+Elapsed time: 0 seconds
+  |                                                                              |                                                                      |   0%  |                                                                              |=======                                                               |  10%  |                                                                              |==============                                                        |  20%  |                                                                              |=====================                                                 |  30%  |                                                                              |============================                                          |  40%  |                                                                              |===================================                                   |  50%  |                                                                              |==========================================                            |  60%  |                                                                              |=================================================                     |  70%  |                                                                              |========================================================              |  80%  |                                                                              |===============================================================       |  90%  |                                                                              |======================================================================| 100%
+
+Completed for rep1
+[1] "rep2_raw_fbc_mat.h5"
+[1] "rep2_filtered_fbc_mat.h5"
+
+Check-1 (rep2): All Genes exist
+
+Check-2 (rep2): All Genes exist
+Modularity Optimizer version 1.3.0 by Ludo Waltman and Nees Jan van Eck
+
+Number of nodes: 6068
+Number of edges: 197031
+
+Running Louvain algorithm...
+Maximum modularity in 10 random starts: 0.8518
+Number of communities: 14
+Elapsed time: 0 seconds
+  |                                                                              |                                                                      |   0%  |                                                                              |=======                                                               |  10%  |                                                                              |==============                                                        |  20%  |                                                                              |=====================                                                 |  30%  |                                                                              |============================                                          |  40%  |                                                                              |===================================                                   |  50%  |                                                                              |==========================================                            |  60%  |                                                                              |=================================================                     |  70%  |                                                                              |========================================================              |  80%  |                                                                              |===============================================================       |  90%  |                                                                              |======================================================================| 100%
+
+Completed for rep2
+[1] "rep3_raw_fbc_mat.h5"
+[1] "rep3_filtered_fbc_mat.h5"
+
+Check-1 (rep3): All Genes exist
+
+Check-2 (rep3): All Genes exist
+Modularity Optimizer version 1.3.0 by Ludo Waltman and Nees Jan van Eck
+
+Number of nodes: 15356
+Number of edges: 498647
+
+Running Louvain algorithm...
+Maximum modularity in 10 random starts: 0.8744
+Number of communities: 16
+Elapsed time: 2 seconds
+  |                                                                              |                                                                      |   0%  |                                                                              |======                                                                |   9%  |                                                                              |=============                                                         |  18%  |                                                                              |===================                                                   |  27%  |                                                                              |=========================                                             |  36%  |                                                                              |================================                                      |  45%  |                                                                              |======================================                                |  55%  |                                                                              |=============================================                         |  64%  |                                                                              |===================================================                   |  73%  |                                                                              |=========================================================             |  82%  |                                                                              |================================================================      |  91%  |                                                                              |======================================================================| 100%
+
+Completed for rep3
