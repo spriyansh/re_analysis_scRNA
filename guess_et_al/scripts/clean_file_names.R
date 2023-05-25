@@ -47,12 +47,24 @@ change.vec <- paste("mv", ind.df$fastq_ftp, ind.df$newFileNames, sep = " ")
 write.table(change.vec,
                 paste0("../../scRNASeqData/guess_et_al/", "P17", "_name_change.sh"),
                 col.names = F, row.names = F, quote = F)
-}
 
 
-# Clean
-raw.meta <- as.data.frame(raw.meta[, c(1:7)])
+# Extract names of p13
+p.13 <- raw.meta[raw.meta$patient == "P3", ]
 
-# Write
-write.table(raw.meta, "../../scRNASeqData/setty_et_al/File_Rename_Metadata_Processed.tsv",
-            sep = "\t", row.names = F)
+# All Lanes
+p.13$Lane <- "L001"
+p.13$newFileNames<- "001.fastq.gz"
+
+# Sample names
+p.13$identify <- paste0(p.13$patient, "Comb", rep(1:8, each = 2))
+
+# Make Filenames
+p.13$newFileNames <- paste(p.13$identify, p.13$sample, p.13$Lane, p.13$Strand, p.13$newFileNames, sep = "_")
+
+
+change.vec <- paste("mv", p.13$fastq_ftp, p.13$newFileNames, sep = " ")
+write.table(change.vec,
+            paste0("../../scRNASeqData/guess_et_al/", "P3", "_name_change.sh"),
+            col.names = F, row.names = F, quote = F)
+
