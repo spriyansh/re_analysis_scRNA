@@ -3,7 +3,8 @@ cellranger count \
 	--fastqs=../input/ \
 	--sample=P1 \
 	--transcriptome=../output/cr_index_hs/ \
-	--localmem=32
+	--localmem=62 \
+	--localcores=8
 
 # Move
 mv rep1_p1 ../output/

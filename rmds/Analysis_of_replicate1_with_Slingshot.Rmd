@@ -48,10 +48,10 @@ sce.ob <- runTSNE(sce.ob, exprs_values = "counts")
 sce.ob <- runNMF(sce.ob, exprs_values = "counts")
 saveRDS(sce.ob, "to_garnaxta/rep1_data/processed_data/sce.ob.RDS")
 
-nmf <- plotNMF(sce.ob, colour_by = "cell_type")+ theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text =element_text(size = 20))
-pca <-  plotPCA(sce.ob, colour_by = "cell_type")+ theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text =element_text(size = 20))
-umap <- plotUMAP(sce.ob, colour_by = "cell_type")+ theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text =element_text(size = 20))
-tsne <- plotTSNE(sce.ob, colour_by = "cell_type")+ theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text =element_text(size = 20))
+nmf <- plotNMF(sce.ob, colour_by = "cell_type") + theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text = element_text(size = 20))
+pca <- plotPCA(sce.ob, colour_by = "cell_type") + theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text = element_text(size = 20))
+umap <- plotUMAP(sce.ob, colour_by = "cell_type") + theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text = element_text(size = 20))
+tsne <- plotTSNE(sce.ob, colour_by = "cell_type") + theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text = element_text(size = 20))
 
 
 png("images_pres/Before Cluster.png", width = 1400, height = 1200)
@@ -66,7 +66,7 @@ cl.info <- cl.info$cluster
 colData(sce.ob)$kmeans <- as.factor(cl.info)
 colData(sce.ob)$cell_type <- as.factor(colData(sce.ob)$cell_type)
 
-umap.cl <-  plotUMAP(sce.ob, colour_by = "kmeans")+ theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text =element_text(size = 20))
+umap.cl <- plotUMAP(sce.ob, colour_by = "kmeans") + theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text = element_text(size = 20))
 
 saveRDS(sce.ob, "to_garnaxta/rep1_data/processed_data/sce.ob.RDS")
 
@@ -76,8 +76,10 @@ dev.off()
 ```
 
 ```{r}
-sling.ob <- slingshot(sce.ob, clusterLabels = "cell_type",  start.clus = "HSC",
-  end.clus = c("Late Eryth", "GMP"), reducedDim = "UMAP")
+sling.ob <- slingshot(sce.ob,
+  clusterLabels = "cell_type", start.clus = "HSC",
+  end.clus = c("Late Eryth", "GMP"), reducedDim = "UMAP"
+)
 
 saveRDS(sling.ob, "to_garnaxta/rep1_data/processed_data/sling.ob.RDS")
 
@@ -88,39 +90,75 @@ sling.c <- slingCurves(sling.ob, as.df = T)
 sling.time <- slingPseudotime(sling.ob)
 red.dim <- cbind(red.dim, sling.time)
 
-kmean <- ggplot(red.dim, aes(x = UMAP1, y = UMAP2, color = clus_info)) + geom_point() + theme_classic()
-cell <- ggplot(red.dim, aes(x = UMAP1, y = UMAP2, color = cell_type)) + geom_point() + theme_classic()
+kmean <- ggplot(red.dim, aes(x = UMAP1, y = UMAP2, color = clus_info)) +
+  geom_point() +
+  theme_classic()
+cell <- ggplot(red.dim, aes(x = UMAP1, y = UMAP2, color = cell_type)) +
+  geom_point() +
+  theme_classic()
 
 
 
-kmean_lin <- kmean + geom_path(data = sling.c %>% arrange(Order), 
-                  aes(x = UMAP1, y = UMAP2, group = Lineage), linewidth  = 2,
-                  inherit.aes = F)+theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text =element_text(size = 20))
+kmean_lin <- kmean + geom_path(
+  data = sling.c %>% arrange(Order),
+  aes(x = UMAP1, y = UMAP2, group = Lineage), linewidth = 2,
+  inherit.aes = F
+) + theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text = element_text(size = 20))
 
-cell_lin <-  cell + geom_path(data = sling.c %>% arrange(Order), 
-                  aes(x = UMAP1, y = UMAP2, group = Lineage,  linewidth  = 0.5), inherit.aes = F,
-                  linewidth  = 2,)+theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text =element_text(size = 20))
+cell_lin <- cell + geom_path(
+  data = sling.c %>% arrange(Order),
+  aes(x = UMAP1, y = UMAP2, group = Lineage, linewidth = 0.5), inherit.aes = F,
+  linewidth = 2,
+) + theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text = element_text(size = 20))
 png("images_pres/Final_Trajectory.png", width = 1600, height = 900)
 ggpubr::ggarrange(kmean_lin, cell_lin)
 dev.off()
 ```
 
 ```{r}
-a <- ggplot(red.dim, aes(x = UMAP1, y = UMAP2, color = Lineage1)) + geom_point(alpha = 0.7) + theme_classic()+ geom_path(data = sling.c[sling.c$Lineage == 1,] %>% arrange(Order), 
-                  aes(x = UMAP1, y = UMAP2, group = Lineage,  linewidth  = 0.5), inherit.aes = F,
-                  linewidth  = 2, color = "black")+theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text =element_text(size = 20)) + scale_color_viridis(option = "plasma", na.value="#F0EAD6")
+a <- ggplot(red.dim, aes(x = UMAP1, y = UMAP2, color = Lineage1)) +
+  geom_point(alpha = 0.7) +
+  theme_classic() +
+  geom_path(
+    data = sling.c[sling.c$Lineage == 1, ] %>% arrange(Order),
+    aes(x = UMAP1, y = UMAP2, group = Lineage, linewidth = 0.5), inherit.aes = F,
+    linewidth = 2, color = "black"
+  ) +
+  theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text = element_text(size = 20)) +
+  scale_color_viridis(option = "plasma", na.value = "#F0EAD6")
 
-b <- ggplot(red.dim, aes(x = UMAP1, y = UMAP2, color = Lineage2)) + geom_point(alpha = 0.7) + theme_classic()+ geom_path(data = sling.c[sling.c$Lineage == 2,] %>% arrange(Order), 
-                  aes(x = UMAP1, y = UMAP2, group = Lineage,  linewidth  = 0.5), inherit.aes = F,
-                  linewidth  = 2,color = "black")+theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text =element_text(size = 20))+scale_color_viridis(option = "plasma", na.value="#F0EAD6")
+b <- ggplot(red.dim, aes(x = UMAP1, y = UMAP2, color = Lineage2)) +
+  geom_point(alpha = 0.7) +
+  theme_classic() +
+  geom_path(
+    data = sling.c[sling.c$Lineage == 2, ] %>% arrange(Order),
+    aes(x = UMAP1, y = UMAP2, group = Lineage, linewidth = 0.5), inherit.aes = F,
+    linewidth = 2, color = "black"
+  ) +
+  theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text = element_text(size = 20)) +
+  scale_color_viridis(option = "plasma", na.value = "#F0EAD6")
 
-c <- ggplot(red.dim, aes(x = UMAP1, y = UMAP2, color = Lineage3)) + geom_point(alpha = 0.7) + theme_classic()+ geom_path(data = sling.c[sling.c$Lineage == 3,] %>% arrange(Order), 
-                  aes(x = UMAP1, y = UMAP2, group = Lineage,  linewidth  = 0.5), inherit.aes = F,
-                  linewidth  = 2,color = "black")+theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text =element_text(size = 20))+ scale_color_viridis(option = "plasma", na.value="#F0EAD6")
+c <- ggplot(red.dim, aes(x = UMAP1, y = UMAP2, color = Lineage3)) +
+  geom_point(alpha = 0.7) +
+  theme_classic() +
+  geom_path(
+    data = sling.c[sling.c$Lineage == 3, ] %>% arrange(Order),
+    aes(x = UMAP1, y = UMAP2, group = Lineage, linewidth = 0.5), inherit.aes = F,
+    linewidth = 2, color = "black"
+  ) +
+  theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text = element_text(size = 20)) +
+  scale_color_viridis(option = "plasma", na.value = "#F0EAD6")
 
-d <- ggplot(red.dim, aes(x = UMAP1, y = UMAP2, color = Lineage4)) + geom_point(alpha = 0.7) + theme_classic()+ geom_path(data = sling.c[sling.c$Lineage == 4,] %>% arrange(Order), 
-                  aes(x = UMAP1, y = UMAP2, group = Lineage,  linewidth  = 0.5), inherit.aes = F,
-                  linewidth  = 2, color = "black")+theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text =element_text(size = 20))+scale_color_viridis(option = "plasma", na.value="#F0EAD6")
+d <- ggplot(red.dim, aes(x = UMAP1, y = UMAP2, color = Lineage4)) +
+  geom_point(alpha = 0.7) +
+  theme_classic() +
+  geom_path(
+    data = sling.c[sling.c$Lineage == 4, ] %>% arrange(Order),
+    aes(x = UMAP1, y = UMAP2, group = Lineage, linewidth = 0.5), inherit.aes = F,
+    linewidth = 2, color = "black"
+  ) +
+  theme(title = element_text(size = 30), axis.text = element_text(size = 25), legend.text = element_text(size = 20)) +
+  scale_color_viridis(option = "plasma", na.value = "#F0EAD6")
 png("images_pres/Final_Trajectory_lineage.png", width = 1600, height = 1000)
 ggpubr::ggarrange(a, b, c, d)
 dev.off()
@@ -130,9 +168,10 @@ dev.off()
 ```{r, }
 pseudotime <- slingPseudotime(sling.ob, na = FALSE)
 cellWeights <- slingCurveWeights(sling.ob)
-sce.ts <- fitGAM(counts = sling.ob@assays@data@listData$counts,
-              pseudotime = pseudotime, cellWeights = cellWeights,
-                 nknots = 3, verbose = FALSE)
+sce.ts <- fitGAM(
+  counts = sling.ob@assays@data@listData$counts,
+  pseudotime = pseudotime, cellWeights = cellWeights,
+  nknots = 3, verbose = FALSE
+)
 saveRDS(sce.ts, "to_garnaxta/rep1_data/processed_data/sce.ts.RDS")
-
 ```
