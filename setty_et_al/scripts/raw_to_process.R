@@ -393,7 +393,7 @@ for (i in names(rep_list)) {
 
   cat(paste0("\nCheck-8 (", i, "): Clustering Completed\n"))
 
-  file_name <- paste0(prefixOut, i, "_Processed_sob.RDS")
+  file_name <- paste0(prefixOut, i, "_Processed_sob")
   SaveH5Seurat(
     object = sob.p, filename = file_name,
     overwrite = T, verbose = FALSE
