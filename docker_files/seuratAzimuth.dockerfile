@@ -16,20 +16,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libx11-dev \
         systemd \
         libssl-dev \
-        libhdf5-dev
+        libhdf5-dev \
+        libfontconfig1-dev \
+	libxml2-dev libharfbuzz-dev \
+	libfribidi-dev \
+	libfreetype6-dev \
+	libpng-dev \
+	libtiff5-dev \
+	libjpeg-dev
         
 # Installing cran packages
-RUN Rscript -e 'install.packages("tidyverse", dependencies = T, Ncpus = 4)'
-RUN Rscript -e 'install.packages("BiocManager", dependencies = T, Ncpus = 4)'
-RUN Rscript -e 'install.packages("remotes", dependencies = T, Ncpus = 4)'
-RUN Rscript -e 'install.packages("devtools", dependencies = T, Ncpus = 4)'
-RUN Rscript -e 'install.packages("Seurat", dependencies = T, Ncpus = 4)'
+RUN Rscript -e 'install.packages("tidyverse", dependencies = T, Ncpus = 16)'
+RUN Rscript -e 'install.packages("BiocManager", dependencies = T, Ncpus = 16)'
+RUN Rscript -e 'install.packages("remotes", dependencies = T, Ncpus = 16)'
+RUN Rscript -e 'install.packages("devtools", dependencies = T, Ncpus = 16)'
+RUN Rscript -e 'install.packages("Seurat", dependencies = T, Ncpus = 16)'
 
 # Installing From Bioconductor Packages
 RUN Rscript -e 'BiocManager::install("rhdf5", force = TRUE, ask = FALSE)'
 
 # Install 
 RUN R -e "remotes::install_github('mojaveazure/seurat-disk')"
+RUN R -e "remotes::install_github('satijalab/azimuth')"
 
 # Set the working directory to root
 WORKDIR /
@@ -43,3 +51,4 @@ RUN mkdir -p input output script
 
 # Run when a container is launched
 CMD ["/bin/bash"]
+
