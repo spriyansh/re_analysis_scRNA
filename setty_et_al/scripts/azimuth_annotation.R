@@ -39,8 +39,6 @@ rep_list <- list(rep1 = rep1_names, rep2 = rep2_names, rep3 = rep3_names)
 
 # Run for every dataset
 for (i in names(rep_list)) {
-  i <- "rep1"
-
   if (i == "rep1") {
     individual <- "1"
     age <- "35"
