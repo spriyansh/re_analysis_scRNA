@@ -52,94 +52,99 @@ for (i in names(rep_list)) {
     age <- "19"
     sex <- "Female"
   }
-    
+
   # Get the names rep#
   rep_i_name <- rep_list[[i]]
-  
+
   #  the Processed Seurat Object
   sob <- LoadH5Seurat(file = paste0(prefixIn, rep_i_name), verbose = F)
-  
+
   # Azimuth Annotations
-  bm <- RunAzimuth(query = sob, 
-                   reference = paste0(str_sub(prefixIn, end = -11), 
-                                      "Azimuth_Human_BoneMarrow")
-                   )
-  
+  bm <- RunAzimuth(
+    query = sob,
+    reference = paste0(
+      str_sub(prefixIn, end = -11),
+      "Azimuth_Human_BoneMarrow"
+    )
+  )
+
   # Plot the Annotations
   p <- DimPlot(bm, reduction = "umap", pt.size = 1, group.by = "predicted.celltype.l2") +
-      ggtitle(paste0("Individual: ", individual, " Age: ", age, " Sex: ", sex)) +
-      scale_color_hue(l = 50) + theme(legend.position = "bottom")
-  
+    ggtitle(paste0("Individual: ", individual, " Age: ", age, " Sex: ", sex)) +
+    scale_color_hue(l = 50) + theme(legend.position = "bottom")
+
   ggsave(p,
-         filename = paste0(prefixOut, i, "_All_Anno_Azimuth.png"),
-         dpi = 1400, limitsize = FALSE, width = 8, height = 8
+    filename = paste0(prefixOut, i, "_All_Anno_Azimuth.png"),
+    dpi = 1400, limitsize = FALSE, width = 8, height = 8
   )
-  
+
   # Subset the Scores
   bm.score <- subset(bm, subset = predicted.celltype.l2.score >= 0.6)
-  
+
   # Plot the Annotations
   p <- DimPlot(bm.score, reduction = "umap", pt.size = 1, group.by = "predicted.celltype.l2") +
-      ggtitle(paste0("Individual: ", individual, " Age: ", age, " Sex: ", sex)) +
-      scale_color_hue(l = 50) + theme(legend.position = "bottom")
-  
-  # Save 
+    ggtitle(paste0("Individual: ", individual, " Age: ", age, " Sex: ", sex)) +
+    scale_color_hue(l = 50) + theme(legend.position = "bottom")
+
+  # Save
   ggsave(p,
-         filename = paste0(prefixOut, i, "_Score_Sub_Anno_Azimuth.png"),
-         dpi = 1400, limitsize = FALSE, width = 8, height = 8
+    filename = paste0(prefixOut, i, "_Score_Sub_Anno_Azimuth.png"),
+    dpi = 1400, limitsize = FALSE, width = 8, height = 8
   )
-  
+
   # Subset the Cell types
   bm.cell <- subset(bm.score,
-                    subset = predicted.celltype.l2 %in% c("Early Eryth",
-                                                          "GMP", "HSC",
-                                                          "LMPP", "Late Eryth", 
-                                                          "CLP", "EMP")
-                    )
-  
+    subset = predicted.celltype.l2 %in% c(
+      "Early Eryth",
+      "GMP", "HSC",
+      "LMPP", "Late Eryth",
+      "CLP", "EMP"
+    )
+  )
+
   # Plot the Annotations
   p <- DimPlot(bm.cell, reduction = "umap", pt.size = 1, group.by = "predicted.celltype.l2") +
-      ggtitle(paste0("Individual: ", individual, " Age: ", age, " Sex: ", sex)) +
-      scale_color_hue(l = 50) + theme(legend.position = "bottom")
-  
+    ggtitle(paste0("Individual: ", individual, " Age: ", age, " Sex: ", sex)) +
+    scale_color_hue(l = 50) + theme(legend.position = "bottom")
+
   ggsave(p,
-         filename = paste0(prefixOut, i, "_Cell_Sub_Anno_Azimuth.png"),
-         dpi = 1400, limitsize = FALSE, width = 8, height = 8
+    filename = paste0(prefixOut, i, "_Cell_Sub_Anno_Azimuth.png"),
+    dpi = 1400, limitsize = FALSE, width = 8, height = 8
   )
-  
+
   # Plot Clusters
   p <- DimPlot(bm.cell, reduction = "umap", pt.size = 1, group.by = "seurat_clusters") +
-      ggtitle(paste0("Individual: ", individual, " Age: ", age, " Sex: ", sex)) +
-      scale_color_hue(l = 50) + theme(legend.position = "bottom")
-  
+    ggtitle(paste0("Individual: ", individual, " Age: ", age, " Sex: ", sex)) +
+    scale_color_hue(l = 50) + theme(legend.position = "bottom")
+
   ggsave(p,
-         filename = paste0(prefixOut, i, "_Seurat_Clusters.png"),
-         dpi = 1400, limitsize = FALSE, width = 8, height = 8
+    filename = paste0(prefixOut, i, "_Seurat_Clusters.png"),
+    dpi = 1400, limitsize = FALSE, width = 8, height = 8
   )
-  
+
   # Extract Normalized Counts and New Metadata to create a CDS Object
   norm.counts <- bm.cell@assays$RNA@data
   metadata <- as.data.frame(bm.cell@meta.data)
   metadata$cell.type <- metadata$predicted.celltype.l2
-  
+
   # Create a fresh seurat Object
-  sob.fresh <- CreateSeuratObject(counts = bm.cell@assays$RNA@counts, 
-                     meta.data = metadata)
+  sob.fresh <- CreateSeuratObject(
+    counts = bm.cell@assays$RNA@counts,
+    meta.data = metadata
+  )
   # Add Normalized Counts
   sob.fresh@assays$RNA@data <- norm.counts
-  
+
   # Add Scaled Data
   sob.fresh@assays$RNA@scale.data <- bm.cell@assays$RNA@scale.data
-  
+
   # Write Seurat H5
   file_name <- paste0(prefixOut, i, "_Annotated_sob")
   SaveH5Seurat(
-      object = sob.fresh, filename = file_name,
-      overwrite = T, verbose = FALSE
+    object = sob.fresh, filename = file_name,
+    overwrite = T, verbose = FALSE
   )
-  
+
   # Convert to Ann Data
   Convert(paste0(prefixOut, i, "_Annotated_sob.h5seurat"), dest = "h5ad")
-  
 }
-

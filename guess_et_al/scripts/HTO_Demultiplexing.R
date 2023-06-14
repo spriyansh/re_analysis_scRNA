@@ -21,9 +21,9 @@ prefixOut <- "guess_et_al/data/output/p3/"
 
 # mds genes
 mds_genes <- c(
-    "TET2", "SF3B1", "ASXL1", "DNMT3A", "SRSF2", "RUNX1", "TP53", "U2AF1",
-    "EZH2", "ZRSR2", "STAG2", "CBL", "NRAS", "JAK2", "SETBP1", "IDH1", "IDH2", "ETV6", "FLT3",
-    "NF1", "CALR", "MPL", "GATA2"
+  "TET2", "SF3B1", "ASXL1", "DNMT3A", "SRSF2", "RUNX1", "TP53", "U2AF1",
+  "EZH2", "ZRSR2", "STAG2", "CBL", "NRAS", "JAK2", "SETBP1", "IDH1", "IDH2", "ETV6", "FLT3",
+  "NF1", "CALR", "MPL", "GATA2"
 )
 
 # Read BioMart info
@@ -32,43 +32,45 @@ reg.out <- c(unique(biomart.anno$SYMBOL))
 
 # all_file_names
 all_file_names <- list.files(paste0(prefixIn))
-cite_file_names <- all_file_names[all_file_names != grep(all_file_names, pattern = "h5", value = T)] 
+cite_file_names <- all_file_names[all_file_names != grep(all_file_names, pattern = "h5", value = T)]
 
 # Seurat H5
-cr_counts <- grep(all_file_names, pattern = "h5", value = T) 
+cr_counts <- grep(all_file_names, pattern = "h5", value = T)
 cr_counts <- Read10X_h5(paste0(prefixIn, cr_counts))
 
 # Read all the HTO
 cite.list <- list()
 
 # Read
-for (i in cite_file_names){
-    matrix_dir = paste0(prefixIn, i)
-    barcode.path <- paste0(matrix_dir, "/barcodes.tsv.gz")
-    features.path <- paste0(matrix_dir, "/features.tsv.gz")
-    matrix.path <- paste0(matrix_dir, "/matrix.mtx.gz")
-    mat <- readMM(file = matrix.path)
-    feature.names = read.delim(features.path, header = FALSE, stringsAsFactors = FALSE)
-    barcode.names = read.delim(barcode.path, header = FALSE, stringsAsFactors = FALSE)
-    colnames(mat) = barcode.names$V1
-    rownames(mat) = feature.names$V1
-    sob <- CreateSeuratObject(counts = mat, project = i)
-    cite.list <- append(cite.list, list(sob))
+for (i in cite_file_names) {
+  matrix_dir <- paste0(prefixIn, i)
+  barcode.path <- paste0(matrix_dir, "/barcodes.tsv.gz")
+  features.path <- paste0(matrix_dir, "/features.tsv.gz")
+  matrix.path <- paste0(matrix_dir, "/matrix.mtx.gz")
+  mat <- readMM(file = matrix.path)
+  feature.names <- read.delim(features.path, header = FALSE, stringsAsFactors = FALSE)
+  barcode.names <- read.delim(barcode.path, header = FALSE, stringsAsFactors = FALSE)
+  colnames(mat) <- barcode.names$V1
+  rownames(mat) <- feature.names$V1
+  sob <- CreateSeuratObject(counts = mat, project = i)
+  cite.list <- append(cite.list, list(sob))
 }
 
 # ADD names
 names(cite.list) <- cite_file_names
 
 # Intersect Barcodes
-joint.bcs <- intersect(colnames(cr_counts),
-                       colnames(cite.list[[1]]),
-                       colnames(cite.list[[2]]),
-                       colnames(cite.list[[3]]),
-                       colnames(cite.list[[4]]),
-                       colnames(cite.list[[5]]),
-                       colnames(cite.list[[6]]),
-                       colnames(cite.list[[7]]),
-                       colnames(cite.list[[8]]))
+joint.bcs <- intersect(
+  colnames(cr_counts),
+  colnames(cite.list[[1]]),
+  colnames(cite.list[[2]]),
+  colnames(cite.list[[3]]),
+  colnames(cite.list[[4]]),
+  colnames(cite.list[[5]]),
+  colnames(cite.list[[6]]),
+  colnames(cite.list[[7]]),
+  colnames(cite.list[[8]])
+)
 
 
 # Distribute filenames
@@ -86,15 +88,15 @@ for (i in names(rep_list)) {
     patientID <- "17"
     condition <- "MDS"
   } else if (i == "aml17") {
-      patientID <- "17"
-      condition <- "sAML"
+    patientID <- "17"
+    condition <- "sAML"
   }
-    
-    measure <- list()
+
+  measure <- list()
 
   # Get the names rep#
   rep_i_name <- rep_list[[i]]
-  
+
   # Load the RDS files
   filt_mat <- Read10X_h5(paste0(prefixIn, "/p17/raw_barcode_matrix/", rep_i_name))
 
@@ -163,8 +165,8 @@ for (i in names(rep_list)) {
       axis.text = element_text(size = 25),
       legend.position = "none"
     ) + xlab(paste0(
-        "PatientID: ", patientID,
-        " Condition: ", condition
+      "PatientID: ", patientID,
+      " Condition: ", condition
     ))
   outDir <- paste0(prefixOut, "p17/QC_Plots/")
   dir.create(outDir, showWarnings = F)
@@ -182,8 +184,8 @@ for (i in names(rep_list)) {
       axis.text = element_text(size = 25),
       legend.position = "none"
     ) + xlab(paste0(
-        "PatientID: ", patientID,
-        " Condition: ", condition
+      "PatientID: ", patientID,
+      " Condition: ", condition
     ))
   outDir <- paste0(prefixOut, "p17/QC_Plots/")
   dir.create(outDir, showWarnings = F)
@@ -197,7 +199,7 @@ for (i in names(rep_list)) {
       title = element_text(size = 25), axis.text = element_text(size = 25),
       legend.position = "none"
     ) + geom_smooth(method = "lm", formula = "y~x") +
-      xlab(paste0("PatientID: ", patientID," Condition: ", condition))
+    xlab(paste0("PatientID: ", patientID, " Condition: ", condition))
   outDir <- paste0(prefixOut, "p17/QC_Plots/")
   ggsave(p,
     filename = paste0(outDir, i, "_Raw_FeatureScatter_percent.mt.png"),
@@ -209,7 +211,7 @@ for (i in names(rep_list)) {
       title = element_text(size = 25), axis.text = element_text(size = 20),
       legend.position = "none"
     ) + geom_smooth(method = "lm", formula = "y~x") +
-      xlab(paste0("PatientID: ", patientID," Condition: ", condition))
+    xlab(paste0("PatientID: ", patientID, " Condition: ", condition))
   outDir <- paste0(prefixOut, "p17/QC_Plots/")
   ggsave(p,
     filename = paste0(outDir, i, "_Raw_FeatureScatter_nFeature_RNA.png"),
@@ -237,84 +239,84 @@ for (i in names(rep_list)) {
 
   # Plots
   p <- VlnPlot(sob.raw,
-               features = c("nFeature_RNA"),
-               pt.size = 1
+    features = c("nFeature_RNA"),
+    pt.size = 1
   ) +
-      theme(
-          title = element_text(size = 25),
-          axis.text = element_text(size = 25),
-          legend.position = "none"
-      ) + xlab(paste0(
-          "PatientID: ", patientID,
-          " Condition: ", condition
-      ))
+    theme(
+      title = element_text(size = 25),
+      axis.text = element_text(size = 25),
+      legend.position = "none"
+    ) + xlab(paste0(
+      "PatientID: ", patientID,
+      " Condition: ", condition
+    ))
   outDir <- paste0(prefixOut, "p17/QC_Plots/")
   dir.create(outDir, showWarnings = F)
   ggsave(p,
-         filename = paste0(outDir, i, "_Sub_VlnPlot_nFeature_RNA.png"),
-         dpi = 1200, limitsize = FALSE
+    filename = paste0(outDir, i, "_Sub_VlnPlot_nFeature_RNA.png"),
+    dpi = 1200, limitsize = FALSE
   )
-  
+
   p <- VlnPlot(sob.raw,
-               features = c("nCount_RNA"),
-               pt.size = 1
+    features = c("nCount_RNA"),
+    pt.size = 1
   ) +
-      theme(
-          title = element_text(size = 25),
-          axis.text = element_text(size = 25),
-          legend.position = "none"
-      ) + xlab(paste0(
-          "PatientID: ", patientID,
-          " Condition: ", condition
-      ))
+    theme(
+      title = element_text(size = 25),
+      axis.text = element_text(size = 25),
+      legend.position = "none"
+    ) + xlab(paste0(
+      "PatientID: ", patientID,
+      " Condition: ", condition
+    ))
   outDir <- paste0(prefixOut, "p17/QC_Plots/")
   dir.create(outDir, showWarnings = F)
   ggsave(p,
-         filename = paste0(outDir, i, "_Sub_VlnPlot_nCount_RNA.png"),
-         dpi = 1200, limitsize = FALSE
+    filename = paste0(outDir, i, "_Sub_VlnPlot_nCount_RNA.png"),
+    dpi = 1200, limitsize = FALSE
   )
-  
+
   p <- VlnPlot(sob.raw,
-               features = c("percent.mt"),
-               pt.size = 1
+    features = c("percent.mt"),
+    pt.size = 1
   ) +
-      theme(
-          title = element_text(size = 25),
-          axis.text = element_text(size = 25),
-          legend.position = "none"
-      ) + xlab(paste0(
-          "PatientID: ", patientID,
-          " Condition: ", condition
-      ))
+    theme(
+      title = element_text(size = 25),
+      axis.text = element_text(size = 25),
+      legend.position = "none"
+    ) + xlab(paste0(
+      "PatientID: ", patientID,
+      " Condition: ", condition
+    ))
   outDir <- paste0(prefixOut, "p17/QC_Plots/")
   dir.create(outDir, showWarnings = F)
   ggsave(p,
-         filename = paste0(outDir, i, "_Sub_VlnPlot_percent.mt.png"),
-         dpi = 1200, limitsize = FALSE
+    filename = paste0(outDir, i, "_Sub_VlnPlot_percent.mt.png"),
+    dpi = 1200, limitsize = FALSE
   )
-  
+
   p <- FeatureScatter(sob.raw, feature1 = "nCount_RNA", feature2 = "percent.mt") +
-      theme(
-          title = element_text(size = 25), axis.text = element_text(size = 25),
-          legend.position = "none"
-      ) + geom_smooth(method = "lm", formula = "y~x") +
-      xlab(paste0("PatientID: ", patientID," Condition: ", condition))
+    theme(
+      title = element_text(size = 25), axis.text = element_text(size = 25),
+      legend.position = "none"
+    ) + geom_smooth(method = "lm", formula = "y~x") +
+    xlab(paste0("PatientID: ", patientID, " Condition: ", condition))
   outDir <- paste0(prefixOut, "p17/QC_Plots/")
   ggsave(p,
-         filename = paste0(outDir, i, "_Sub_FeatureScatter_percent.mt.png"),
-         dpi = 1200, limitsize = FALSE
+    filename = paste0(outDir, i, "_Sub_FeatureScatter_percent.mt.png"),
+    dpi = 1200, limitsize = FALSE
   )
-  
+
   p <- FeatureScatter(sob.raw, feature1 = "nCount_RNA", feature2 = "nFeature_RNA") +
-      theme(
-          title = element_text(size = 25), axis.text = element_text(size = 20),
-          legend.position = "none"
-      ) + geom_smooth(method = "lm", formula = "y~x") +
-      xlab(paste0("PatientID: ", patientID," Condition: ", condition))
+    theme(
+      title = element_text(size = 25), axis.text = element_text(size = 20),
+      legend.position = "none"
+    ) + geom_smooth(method = "lm", formula = "y~x") +
+    xlab(paste0("PatientID: ", patientID, " Condition: ", condition))
   outDir <- paste0(prefixOut, "p17/QC_Plots/")
   ggsave(p,
-         filename = paste0(outDir, i, "_Sub_FeatureScatter_nFeature_RNA.png"),
-         dpi = 1200, limitsize = FALSE
+    filename = paste0(outDir, i, "_Sub_FeatureScatter_nFeature_RNA.png"),
+    dpi = 1200, limitsize = FALSE
   )
 
   # Check
@@ -328,8 +330,10 @@ for (i in names(rep_list)) {
 
   # Pre-processing
   sob.prs <- NormalizeData(sob.sub, verbose = F)
-  sob.prs <- FindVariableFeatures(sob.prs, selection.method = "vst", verbose = F,
-                                  nfeatures = 6000)
+  sob.prs <- FindVariableFeatures(sob.prs,
+    selection.method = "vst", verbose = F,
+    nfeatures = 6000
+  )
   sob.prs <- ScaleData(sob.prs, features = rownames(sob.prs), verbose = F)
   sob.prs <- RunPCA(sob.prs,
     features = VariableFeatures(sob.prs),
@@ -338,7 +342,7 @@ for (i in names(rep_list)) {
 
   # Basic UMAP
   p <- DimPlot(sob.prs, reduction = "pca", pt.size = 1) + theme(legend.position = "none") +
-    ggtitle(paste0("PatientID: ", patientID," Condition: ", condition))
+    ggtitle(paste0("PatientID: ", patientID, " Condition: ", condition))
   outDir <- paste0(prefixOut, "p17/PCA/")
   dir.create(outDir, showWarnings = F)
   ggsave(p,
@@ -375,14 +379,15 @@ for (i in names(rep_list)) {
   )
 
   # Re-Run PCA
-  sob.cc <- RunPCA(sob.cc,npcs = 10,
+  sob.cc <- RunPCA(sob.cc,
+    npcs = 10,
     features = c(s.genes, g2m.genes),
     verbose = F, ndims.print = 0, nfeatures.print = 0
   )
 
   # Save The plot
   p <- DimPlot(sob.cc, pt.size = 1) +
-    ggtitle(paste0("PatientID: ", patientID," Condition: ", condition)) +
+    ggtitle(paste0("PatientID: ", patientID, " Condition: ", condition)) +
     scale_color_manual(
       name = "Cell-Cycle GOs",
       breaks = c("G2M", "S", "G1"),
@@ -402,12 +407,13 @@ for (i in names(rep_list)) {
   )
 
   # Re-Run PCA
-  test <- RunPCA(sob.cc,npcs = 10,
+  test <- RunPCA(sob.cc,
+    npcs = 10,
     features = c(s.genes, g2m.genes),
     verbose = F, ndims.print = 0, nfeatures.print = 0
   )
   p <- DimPlot(test, reduction = "pca", pt.size = 1) +
-      ggtitle(paste0("PatientID: ", patientID," Condition: ", condition)) +
+    ggtitle(paste0("PatientID: ", patientID, " Condition: ", condition)) +
     scale_color_manual(
       name = "Cell-Cycle GOs",
       breaks = c("G2M", "S", "G1"),
@@ -416,8 +422,8 @@ for (i in names(rep_list)) {
   outDir <- paste0(prefixOut, "p17/PCA/")
   dir.create(outDir, showWarnings = F)
   ggsave(p,
-         filename = paste0(outDir, i, "_CCC_PCA.png"),
-         dpi = 1200, limitsize = FALSE
+    filename = paste0(outDir, i, "_CCC_PCA.png"),
+    dpi = 1200, limitsize = FALSE
   )
 
   sob.cc <- RunPCA(sob.cc,
@@ -426,7 +432,7 @@ for (i in names(rep_list)) {
   )
 
   p <- DimPlot(sob.cc, reduction = "pca", pt.size = 1) +
-      ggtitle(paste0("PatientID: ", patientID," Condition: ", condition)) +
+    ggtitle(paste0("PatientID: ", patientID, " Condition: ", condition)) +
     scale_color_manual(
       name = "Cell-Cycle GOs",
       breaks = c("G2M", "S", "G1"),
@@ -435,8 +441,8 @@ for (i in names(rep_list)) {
   outDir <- paste0(prefixOut, "p17/PCA/")
   dir.create(outDir, showWarnings = F)
   ggsave(p,
-         filename = paste0(outDir, i, "_CCC_all_PCA.png"),
-         dpi = 1200, limitsize = FALSE
+    filename = paste0(outDir, i, "_CCC_all_PCA.png"),
+    dpi = 1200, limitsize = FALSE
   )
 
   # Save
@@ -444,8 +450,8 @@ for (i in names(rep_list)) {
   dir.create(outDir, showWarnings = F)
   file_name <- paste0(outDir, i, "_CCC_sob")
   SaveH5Seurat(
-      object = sob.prs, filename = file_name, overwrite = T,
-      verbose = FALSE
+    object = sob.prs, filename = file_name, overwrite = T,
+    verbose = FALSE
   )
 
   cat(paste0("\nCheck-7 (", i, "): Cell-Cycle-Corrected\n"))
@@ -461,26 +467,26 @@ for (i in names(rep_list)) {
   dir.create(outDir, showWarnings = F)
   file_name <- paste0(outDir, i, "_Processed_sob")
   SaveH5Seurat(
-      object = sob.p, filename = file_name, overwrite = T,
-      verbose = FALSE
+    object = sob.p, filename = file_name, overwrite = T,
+    verbose = FALSE
   )
 
   # Save the UMAP with the cluster
   p <- DimPlot(sob.p, reduction = "umap", pt.size = 1, group.by = "seurat_clusters") +
-      ggtitle(paste0("PatientID: ", patientID," Condition: ", condition)) +
+    ggtitle(paste0("PatientID: ", patientID, " Condition: ", condition)) +
     scale_color_hue(l = 50)
   outDir <- paste0(prefixOut, "p17/UMAP/")
   dir.create(outDir, showWarnings = F)
   ggsave(p,
-         filename = paste0(outDir, i, "_C_UMAP.png"),
-         dpi = 1200, limitsize = FALSE
+    filename = paste0(outDir, i, "_C_UMAP.png"),
+    dpi = 1200, limitsize = FALSE
   )
 
   cat(paste0("\nCheck-9 (", i, "): Saved Processed File\n"))
 
   # Save
   write.table(t(as.data.frame(measure)),
-    paste0(prefixOut, "/p17/",i, "p17_Measure.tsv"),
+    paste0(prefixOut, "/p17/", i, "p17_Measure.tsv"),
     col.names = NA
   )
 
