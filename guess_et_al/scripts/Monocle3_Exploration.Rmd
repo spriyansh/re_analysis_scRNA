@@ -1,0 +1,172 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+
+```{r}
+source("../../helper_functions/run_Monocle3.R")
+inPrefix <- "../data/output/p17/Integrated/"
+outPrefix <- "../data/output/p17/Monocle3/"
+suppressPackageStartupMessages(library(Seurat))
+suppressPackageStartupMessages(library(SeuratData))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(SeuratDisk))
+```
+
+```{r, message=FALSE, warning=F}
+sob <- LoadH5Seurat(paste0(inPrefix, "Guess_Integrated_sob.h5seurat"))
+```
+
+### Running Monocle3
+```{r}
+mds_sob <- subset(x = sob, subset = orig.ident == "MDS17")
+aml_sob <- subset(x = sob, subset = orig.ident == "AML17")
+
+mds_cds <- run_monocel3(object = mds_sob, norm_method = "none")
+aml_cds <- run_monocel3(object = aml_sob, norm_method = "none")
+```
+
+### Color By Azimuth Cells
+```{r}
+
+p1 <- plot_cells(mds_cds, color_cells_by = "pseudotime", show_trajectory_graph = T,
+                label_groups_by_cluster = F, label_cell_groups = F, cell_size = 0.8) +
+    ggtitle("MDS State")
+
+p1 <- p1 + theme(legend.position = "none")  + theme_minimal()
+
+p2 <- plot_cells(aml_cds, color_cells_by = "pseudotime", show_trajectory_graph = T,
+                label_groups_by_cluster = F, label_cell_groups = F, cell_size = 0.1)+
+    ggtitle("AML State")
+
+p2 <- p2 + theme(legend.position = "bottom") + theme_minimal()
+
+p3 <- plot_cells(mds_cds, color_cells_by = "Azimuth.Cells", show_trajectory_graph = F,
+                label_groups_by_cluster = F, label_cell_groups = F, cell_size = 0.8)+
+    ggtitle("MDS State")
+
+p3 <- p3 + theme(legend.position = "none")  + theme_minimal()
+
+p4 <- plot_cells(aml_cds, color_cells_by = "Azimuth.Cells", show_trajectory_graph = F,
+                label_groups_by_cluster = F, label_cell_groups = F, cell_size = 0.8)+
+    ggtitle("AML State")
+p4 <- p4 + theme(legend.position = "bottom") + theme_minimal()
+
+ggpubr::ggarrange(p3,p4, p1, p2, ncol = 2, nrow = 2)
+
+```
+
+### Color By SingleR Cells
+```{r}
+mds.meta <- as.data.frame(colData(mds_cds))
+mds.hsc <- mds.meta[mds.meta$Azimuth.Cells == "HSC" & mds.meta$SingleR.Cells == "HSCs",]
+
+aml.meta <- as.data.frame(colData(aml_cds))
+aml.hsc <- aml.meta[aml.meta$Azimuth.Cells == "HSC" & aml.meta$SingleR.Cells == "HSCs",]
+```
+
+### Color By SingleR Cells
+```{r}
+mds_cds <- order_cells(mds_cds, root_cells = rownames(colData(mds_cds))[rownames(colData(mds_cds)) %in% rownames(mds.hsc)])
+
+aml_cds <- order_cells(aml_cds, root_cells = rownames(colData(aml_cds))[rownames(colData(aml_cds)) %in% rownames(aml.hsc)])
+
+
+```
+
+```{r}
+
+p <- plot_cells(cds, color_cells_by = "Azimuth.Cells", show_trajectory_graph = F,
+                label_groups_by_cluster = F, label_cell_groups = T,
+                group_label_size = 8, cell_size = 0.7)
+p <- p + theme(legend.position = "bottom") + 
+    scale_color_brewer(palette = "Dark2")
+
+# Extract the plot data
+plot_data <- ggplot_build(p)$data[[1]]
+
+# Add alpha to the desired column
+plot_data$alpha <- colData(cds)$orig.ident  # Replace 'my_column' with the correct column name
+plot_data$color <- colData(cds)$Azimuth.Cells
+
+# Create a new ggplot object using the modified plot data
+a <- ggplot(plot_data, aes(x, y, color = color, alpha = alpha)) +
+  geom_point(size = 1) + scale_alpha_manual(values = c("AML17" = 0.2, "MDS17" = 1))+
+  labs(title = "MDS") +
+  theme_minimal()
+    
+b <- ggplot(plot_data, aes(x, y, color = color, alpha = alpha)) +
+  geom_point(size = 1) + scale_alpha_manual(values = c("AML17" = 1, "MDS17" = 0.2))+
+  labs(title = "AML") +
+  theme_minimal()
+c <- a+b
+```
+
+```{r}
+cds_aml <- cds[, colData(cds)$orig.ident %in% "AML17"]
+cds_mds <- cds[, colData(cds)$orig.ident %in% "MDS17"]
+
+cds_mds <- cluster_cells(cds_mds, reduction_method = "UMAP")
+cds_aml <- cluster_cells(cds_aml, reduction_method = "UMAP")
+
+cds_mds <- learn_graph(cds_mds, verbose = F)
+cds_aml <- learn_graph(cds_aml, verbose = F)
+    
+# Order cells
+cds_aml <- order_cells(cds_aml, root_cells = rownames(colData(cds_aml)[colData(cds_aml)[["Azimuth.Cells"]] == "HSC", ]))
+cds_mds <- order_cells(cds_mds, root_cells = rownames(colData(cds_mds)[colData(cds_mds)[["Azimuth.Cells"]] == "HSC", ]))
+
+p_aml <- plot_cells(cds_aml, color_cells_by = "pseudotime", show_trajectory_graph = T,
+                label_groups_by_cluster = F, label_cell_groups = T,
+                group_label_size = 8, cell_size = 0.7)
+p_mds <- plot_cells(cds_mds, color_cells_by = "pseudotime", show_trajectory_graph = T,
+                label_groups_by_cluster = F, label_cell_groups = T,
+                group_label_size = 8, cell_size = 0.7)
+
+tr <- p_mds + p_aml
+```
+
+```{r}
+# Subset
+cds_aml_subset <- choose_graph_segments(cds_aml)
+cds_aml_subset <- run_monocel3(cds_aml_subset, object.type = "monocle3", umap.dim = 3)
+p_aml_subset <- plot_cells(cds_aml_subset, color_cells_by = "pseudotime", show_trajectory_graph = T,
+                label_groups_by_cluster = F, label_cell_groups = T,
+                group_label_size = 8, cell_size = 0.7)
+
+p_aml_subset_cells <- plot_cells(cds_aml_subset, color_cells_by = "Azimuth.Cells", show_trajectory_graph = T,
+                label_groups_by_cluster = F, label_cell_groups = F,
+                cell_size = 0.7) + theme_minimal()
+p_aml_subset_cells_data <- ggplot_build(p_aml_subset_cells)$data[[1]]
+
+p_aml_subset_cells_data$color <- colData(cds_aml_subset)$Azimuth.Cells
+
+d <- ggplot(p_aml_subset_cells_data, aes(x, y, color = color)) +
+  geom_point(size = 1)+
+  labs(title = "AML Subset") +
+  theme_minimal()
+
+c2 <- a +b+ d
+tr2 <- p_mds + p_aml+ p_aml_subset
+
+
+# Save
+saveRDS(cds_aml, "../data/output/Monocle3_Exploration/cds_aml.RDS")
+saveRDS(cds_mds, "../data/output/Monocle3_Exploration/cds_mds.RDS")
+```
+
+```{r}
+
+my_palette <- c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33",
+                "#A65628", "#F781BF", "#999999", "#FBB4AE", "#B3CDE3")#, "#CCEBC5")
+
+
+y <-plot_cells(cds_mds, color_cells_by = "SingleR.Cells", show_trajectory_graph = F,cell_size = 2) + theme(legend.position = "bottom") + scale_color_manual(values = my_palette)
+
+```
+
+

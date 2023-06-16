@@ -1,7 +1,7 @@
 #######################################
 ## Author: Priyansh Srivastava ########
 ## Email: spriyansh29@gmail.com #######
-## Script: Pre-Process and CC Remove ##
+## Script: Pre-Process ################
 #######################################
 
 set.seed(007)
@@ -27,30 +27,30 @@ mds_genes <- c(
 )
 
 
-# Read BioMart info
-biomart.anno <- readRDS(paste0(prefixIn, "cell_cycle_data.mart"))
-reg.out <- c(unique(biomart.anno$SYMBOL))
-
 # all_file_names
 all_file_names <- list.files(paste0(prefixIn, "/p17/raw_barcode_matrix/"))
 
 # Distribute filenames
-MDS17_names <- grep(all_file_names, pattern = "MDS", value = T) # Male-35
-AML17_names <- grep(all_file_names, pattern = "AML", value = T) # Female-28
+MDS17_names <- grep(all_file_names, pattern = "MDS", value = T) # Male-84-MDS
+AML17_names <- grep(all_file_names, pattern = "AML", value = T) # Male-84-AML
 
 # Make a list of filenames
-rep_list <- list(mds17 = MDS17_names, aml17 = AML17_names)
+rep_list <- list(MDS17 = MDS17_names, AML17 = AML17_names)
 
 # Run for every dataset
 for (i in names(rep_list)) {
-  # i <- "aml17"
+  # i <- "MDS17"
 
-  if (i == "mds17") {
+  if (i == "MDS17") {
     patientID <- "17"
     condition <- "MDS"
-  } else if (i == "aml17") {
+    age <- 84
+    sex <- "Male"
+  } else if (i == "AML17") {
     patientID <- "17"
     condition <- "sAML"
+    age <- 84
+    sex <- "Male"
   }
 
   measure <- list()
@@ -74,7 +74,7 @@ for (i in names(rep_list)) {
 
   # Create Seurat Object
   sob.raw <- CreateSeuratObject(
-    counts = filt_mat, min.cells = 500,
+    counts = filt_mat, min.cells = 250,
     min.features = 250, project = i
   )
 
@@ -100,87 +100,101 @@ for (i in names(rep_list)) {
   # Plots
   p <- VlnPlot(sob.raw,
     features = c("nFeature_RNA"),
-    pt.size = 1
+    pt.size = 0.5
   ) +
     theme(
-      title = element_text(size = 25),
-      axis.text = element_text(size = 25),
+      title = element_text(size = 10),
+      axis.text = element_text(size = 7),
       legend.position = "none"
     ) + xlab(paste0(
       "PatientID: ", patientID,
-      " Condition: ", condition
+      " Condition: ", condition,
+      " Age: ", age,
+      " Sex: ", sex
     ))
   outDir <- paste0(prefixOut, "p17/QC_Plots/")
   dir.create(outDir, showWarnings = F)
   ggsave(p,
     filename = paste0(outDir, i, "_Raw_VlnPlot_nFeature_RNA.png"),
-    dpi = 1200, limitsize = FALSE
+    dpi = 1200, limitsize = FALSE, width = 4
   )
 
   p <- VlnPlot(sob.raw,
     features = c("nCount_RNA"),
-    pt.size = 1
+    pt.size = 0.5
   ) +
     theme(
-      title = element_text(size = 25),
-      axis.text = element_text(size = 25),
+      title = element_text(size = 10),
+      axis.text = element_text(size = 7),
       legend.position = "none"
     ) + xlab(paste0(
       "PatientID: ", patientID,
-      " Condition: ", condition
+      " Condition: ", condition,
+      " Age: ", age,
+      " Sex: ", sex
     ))
   outDir <- paste0(prefixOut, "p17/QC_Plots/")
   dir.create(outDir, showWarnings = F)
   ggsave(p,
     filename = paste0(outDir, i, "_Raw_VlnPlot_nCount_RNA.png"),
-    dpi = 1200, limitsize = FALSE
+    dpi = 1200, limitsize = FALSE, width = 4
   )
 
   p <- VlnPlot(sob.raw,
     features = c("percent.mt"),
-    pt.size = 1
+    pt.size = 0.5
   ) +
     theme(
-      title = element_text(size = 25),
-      axis.text = element_text(size = 25),
+      title = element_text(size = 10),
+      axis.text = element_text(size = 7),
       legend.position = "none"
     ) + xlab(paste0(
       "PatientID: ", patientID,
-      " Condition: ", condition
+      " Condition: ", condition,
+      " Age: ", age,
+      " Sex: ", sex
     ))
   outDir <- paste0(prefixOut, "p17/QC_Plots/")
   dir.create(outDir, showWarnings = F)
   ggsave(p,
     filename = paste0(outDir, i, "_Raw_VlnPlot_percent.mt.png"),
-    dpi = 1200, limitsize = FALSE
+    dpi = 1200, limitsize = FALSE, width = 4
   )
 
   p <- FeatureScatter(sob.raw, feature1 = "nCount_RNA", feature2 = "percent.mt") +
     theme(
-      title = element_text(size = 25), axis.text = element_text(size = 25),
+      title = element_text(size = 10), axis.text = element_text(size = 7),
       legend.position = "none"
     ) + geom_smooth(method = "lm", formula = "y~x") +
-    xlab(paste0("PatientID: ", patientID, " Condition: ", condition))
+    xlab(paste0(
+      "PatientID: ", patientID, " Condition: ", condition,
+      " Age: ", age,
+      " Sex: ", sex
+    ))
   outDir <- paste0(prefixOut, "p17/QC_Plots/")
   ggsave(p,
     filename = paste0(outDir, i, "_Raw_FeatureScatter_percent.mt.png"),
-    dpi = 1200, limitsize = FALSE
+    dpi = 1200, limitsize = FALSE, width = 4
   )
 
   p <- FeatureScatter(sob.raw, feature1 = "nCount_RNA", feature2 = "nFeature_RNA") +
     theme(
-      title = element_text(size = 25), axis.text = element_text(size = 20),
+      title = element_text(size = 10), axis.text = element_text(size = 7),
       legend.position = "none"
     ) + geom_smooth(method = "lm", formula = "y~x") +
-    xlab(paste0("PatientID: ", patientID, " Condition: ", condition))
+    xlab(paste0(
+      "PatientID: ", patientID, " Condition: ", condition,
+      " Age: ", age,
+      " Sex: ", sex
+    ))
   outDir <- paste0(prefixOut, "p17/QC_Plots/")
   ggsave(p,
     filename = paste0(outDir, i, "_Raw_FeatureScatter_nFeature_RNA.png"),
-    dpi = 1200, limitsize = FALSE
+    dpi = 1200, limitsize = FALSE, width = 4
   )
 
   # Subset # Check Required if-else
-  sob.sub <- subset(sob.raw, subset = nFeature_RNA > 100 & nCount_RNA < 30000 & percent.mt < 15)
+  sob.sub <- subset(sob.raw, subset = percent.mt < 15)
 
   # Add Measuremnets
   measure <- append(measure, list(
@@ -201,83 +215,97 @@ for (i in names(rep_list)) {
   # Plots
   p <- VlnPlot(sob.raw,
     features = c("nFeature_RNA"),
-    pt.size = 1
+    pt.size = 0.5
   ) +
     theme(
-      title = element_text(size = 25),
-      axis.text = element_text(size = 25),
+      title = element_text(size = 10),
+      axis.text = element_text(size = 7),
       legend.position = "none"
     ) + xlab(paste0(
       "PatientID: ", patientID,
-      " Condition: ", condition
+      " Condition: ", condition,
+      " Age: ", age,
+      " Sex: ", sex
     ))
   outDir <- paste0(prefixOut, "p17/QC_Plots/")
   dir.create(outDir, showWarnings = F)
   ggsave(p,
     filename = paste0(outDir, i, "_Sub_VlnPlot_nFeature_RNA.png"),
-    dpi = 1200, limitsize = FALSE
+    dpi = 1200, limitsize = FALSE, width = 4
   )
 
   p <- VlnPlot(sob.raw,
     features = c("nCount_RNA"),
-    pt.size = 1
+    pt.size = 0.5
   ) +
     theme(
-      title = element_text(size = 25),
-      axis.text = element_text(size = 25),
+      title = element_text(size = 10),
+      axis.text = element_text(size = 7),
       legend.position = "none"
     ) + xlab(paste0(
       "PatientID: ", patientID,
-      " Condition: ", condition
+      " Condition: ", condition,
+      " Age: ", age,
+      " Sex: ", sex
     ))
   outDir <- paste0(prefixOut, "p17/QC_Plots/")
   dir.create(outDir, showWarnings = F)
   ggsave(p,
     filename = paste0(outDir, i, "_Sub_VlnPlot_nCount_RNA.png"),
-    dpi = 1200, limitsize = FALSE
+    dpi = 1200, limitsize = FALSE, width = 4
   )
 
   p <- VlnPlot(sob.raw,
     features = c("percent.mt"),
-    pt.size = 1
+    pt.size = 0.5
   ) +
     theme(
-      title = element_text(size = 25),
-      axis.text = element_text(size = 25),
+      title = element_text(size = 10),
+      axis.text = element_text(size = 7),
       legend.position = "none"
     ) + xlab(paste0(
       "PatientID: ", patientID,
-      " Condition: ", condition
+      " Condition: ", condition,
+      " Age: ", age,
+      " Sex: ", sex
     ))
   outDir <- paste0(prefixOut, "p17/QC_Plots/")
   dir.create(outDir, showWarnings = F)
   ggsave(p,
     filename = paste0(outDir, i, "_Sub_VlnPlot_percent.mt.png"),
-    dpi = 1200, limitsize = FALSE
+    dpi = 1200, limitsize = FALSE, width = 4
   )
 
   p <- FeatureScatter(sob.raw, feature1 = "nCount_RNA", feature2 = "percent.mt") +
     theme(
-      title = element_text(size = 25), axis.text = element_text(size = 25),
+      title = element_text(size = 10), axis.text = element_text(size = 7),
       legend.position = "none"
     ) + geom_smooth(method = "lm", formula = "y~x") +
-    xlab(paste0("PatientID: ", patientID, " Condition: ", condition))
+    xlab(paste0(
+      "PatientID: ", patientID, " Condition: ", condition,
+      " Age: ", age,
+      " Sex: ", sex
+    ))
   outDir <- paste0(prefixOut, "p17/QC_Plots/")
   ggsave(p,
     filename = paste0(outDir, i, "_Sub_FeatureScatter_percent.mt.png"),
-    dpi = 1200, limitsize = FALSE
+    dpi = 1200, limitsize = FALSE, width = 4
   )
 
   p <- FeatureScatter(sob.raw, feature1 = "nCount_RNA", feature2 = "nFeature_RNA") +
     theme(
-      title = element_text(size = 25), axis.text = element_text(size = 20),
+      title = element_text(size = 10), axis.text = element_text(size = 7),
       legend.position = "none"
     ) + geom_smooth(method = "lm", formula = "y~x") +
-    xlab(paste0("PatientID: ", patientID, " Condition: ", condition))
+    xlab(paste0(
+      "PatientID: ", patientID, " Condition: ", condition,
+      " Age: ", age,
+      " Sex: ", sex
+    ))
   outDir <- paste0(prefixOut, "p17/QC_Plots/")
   ggsave(p,
     filename = paste0(outDir, i, "_Sub_FeatureScatter_nFeature_RNA.png"),
-    dpi = 1200, limitsize = FALSE
+    dpi = 1200, limitsize = FALSE, width = 4
   )
 
   # Check
@@ -302,13 +330,17 @@ for (i in names(rep_list)) {
   )
 
   # Basic UMAP
-  p <- DimPlot(sob.prs, reduction = "pca", pt.size = 1) + theme(legend.position = "none") +
-    ggtitle(paste0("PatientID: ", patientID, " Condition: ", condition))
+  p <- DimPlot(sob.prs, reduction = "pca", pt.size = 0.5) + theme(legend.position = "none") +
+    ggtitle(paste0(
+      "PatientID: ", patientID, " Condition: ", condition,
+      " Age: ", age,
+      " Sex: ", sex
+    ))
   outDir <- paste0(prefixOut, "p17/PCA/")
   dir.create(outDir, showWarnings = F)
   ggsave(p,
     filename = paste0(outDir, i, "_basic_PCA.png"),
-    dpi = 1200, limitsize = FALSE
+    dpi = 1200, limitsize = FALSE, width = 8
   )
 
   # Save
@@ -322,103 +354,8 @@ for (i in names(rep_list)) {
 
   cat(paste0("\nCheck-6 (", i, "): Pre-processed Written\n"))
 
-  # Check how many genes are present in the dataset
-  indata <- rownames(sob.prs)[rownames(sob.prs) %in% reg.out]
-
-  # Keep only those which are present in data
-  biomart.anno <- biomart.anno[biomart.anno$SYMBOL %in% indata, ]
-
-  # For seurat we need to divide genes into vectors
-  s.genes <- unique(biomart.anno[biomart.anno$GO %in% c("GO:0006260"), "SYMBOL"])
-  g2m.genes <- unique(biomart.anno[biomart.anno$GO %in% c("GO:0000087", "GO:0000279", "GO:0007059", "GO:0048285"), "SYMBOL"])
-
-  # Cell Cycle Scores
-  sob.cc <- CellCycleScoring(sob.prs,
-    s.features = s.genes,
-    g2m.features = g2m.genes,
-    set.ident = TRUE
-  )
-
-  # Re-Run PCA
-  sob.cc <- RunPCA(sob.cc,
-    npcs = 10,
-    features = c(s.genes, g2m.genes),
-    verbose = F, ndims.print = 0, nfeatures.print = 0
-  )
-
-  # Save The plot
-  p <- DimPlot(sob.cc, pt.size = 1) +
-    ggtitle(paste0("PatientID: ", patientID, " Condition: ", condition)) +
-    scale_color_manual(
-      name = "Cell-Cycle GOs",
-      breaks = c("G2M", "S", "G1"),
-      values = c("G2M" = "#009E73", "S" = "#D55E00", "G1" = "#56B4E9")
-    )
-  outDir <- paste0(prefixOut, "p17/PCA/")
-  dir.create(outDir, showWarnings = F)
-  ggsave(p,
-    filename = paste0(outDir, i, "_CCG_PCA.png"),
-    dpi = 1200, limitsize = FALSE
-  )
-
-  # Scale to Regress out
-  sob.cc <- ScaleData(sob.cc,
-    vars.to.regress = c("S.Score", "G2M.Score"),
-    features = rownames(sob.cc), verbose = T
-  )
-
-  # Re-Run PCA
-  test <- RunPCA(sob.cc,
-    npcs = 10,
-    features = c(s.genes, g2m.genes),
-    verbose = F, ndims.print = 0, nfeatures.print = 0
-  )
-  p <- DimPlot(test, reduction = "pca", pt.size = 1) +
-    ggtitle(paste0("PatientID: ", patientID, " Condition: ", condition)) +
-    scale_color_manual(
-      name = "Cell-Cycle GOs",
-      breaks = c("G2M", "S", "G1"),
-      values = c("G2M" = "#009E73", "S" = "#D55E00", "G1" = "#56B4E9")
-    )
-  outDir <- paste0(prefixOut, "p17/PCA/")
-  dir.create(outDir, showWarnings = F)
-  ggsave(p,
-    filename = paste0(outDir, i, "_CCC_PCA.png"),
-    dpi = 1200, limitsize = FALSE
-  )
-
-  sob.cc <- RunPCA(sob.cc,
-    features = VariableFeatures(sob.cc),
-    nfeatures.print = 0, verbose = F, ndims.print = 0
-  )
-
-  p <- DimPlot(sob.cc, reduction = "pca", pt.size = 1) +
-    ggtitle(paste0("PatientID: ", patientID, " Condition: ", condition)) +
-    scale_color_manual(
-      name = "Cell-Cycle GOs",
-      breaks = c("G2M", "S", "G1"),
-      values = c("G2M" = "#009E73", "S" = "#D55E00", "G1" = "#56B4E9")
-    )
-  outDir <- paste0(prefixOut, "p17/PCA/")
-  dir.create(outDir, showWarnings = F)
-  ggsave(p,
-    filename = paste0(outDir, i, "_CCC_all_PCA.png"),
-    dpi = 1200, limitsize = FALSE
-  )
-
-  # Save
-  outDir <- paste0(prefixOut, "p17/SeuratObjects/")
-  dir.create(outDir, showWarnings = F)
-  file_name <- paste0(outDir, i, "_CCC_sob")
-  SaveH5Seurat(
-    object = sob.prs, filename = file_name, overwrite = T,
-    verbose = FALSE
-  )
-
-  cat(paste0("\nCheck-7 (", i, "): Cell-Cycle-Corrected\n"))
-
   # More Pre-processing
-  sob.p <- FindNeighbors(sob.cc, verbose = F)
+  sob.p <- FindNeighbors(sob.prs, verbose = F)
   sob.p <- FindClusters(sob.p, verbose = F)
   sob.p <- RunUMAP(sob.p, dims = 1:10, verbose = F)
 
@@ -433,14 +370,18 @@ for (i in names(rep_list)) {
   )
 
   # Save the UMAP with the cluster
-  p <- DimPlot(sob.p, reduction = "umap", pt.size = 1, group.by = "seurat_clusters") +
-    ggtitle(paste0("PatientID: ", patientID, " Condition: ", condition)) +
+  p <- DimPlot(sob.p, reduction = "umap", pt.size = 0.5, group.by = "seurat_clusters") +
+    ggtitle(paste0(
+      "PatientID: ", patientID, " Condition: ", condition,
+      " Age: ", age,
+      " Sex: ", sex
+    )) +
     scale_color_hue(l = 50)
   outDir <- paste0(prefixOut, "p17/UMAP/")
   dir.create(outDir, showWarnings = F)
   ggsave(p,
     filename = paste0(outDir, i, "_C_UMAP.png"),
-    dpi = 1200, limitsize = FALSE
+    dpi = 1200, limitsize = FALSE, width = 8
   )
 
   cat(paste0("\nCheck-9 (", i, "): Saved Processed File\n"))
