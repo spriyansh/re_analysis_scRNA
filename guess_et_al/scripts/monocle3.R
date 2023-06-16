@@ -12,11 +12,9 @@ suppressPackageStartupMessages(library(SeuratData))
 suppressPackageStartupMessages(library(SeuratDisk))
 
 # Prefix
-# Prefix
-prefixIn <- "setty_et_al/data/output/Azimuth/"
-prefixIn2 <- "setty_et_al/data/output/PHATE/"
-dir.create("setty_et_al/data/output/monocle3", showWarnings = FALSE)
-prefixOut <- "setty_et_al/data/output/monocle3"
+prefixIn <- "guess_et_al/data/output/p17/Azimuth/"
+dir.create("guess_et_al/data/output/p17/Monocel3/", showWarnings = FALSE)
+prefixOut <- "guess_et_al/data/output/p17/Monocel3/"
 
 # mds genes
 mds_genes <- c(
@@ -30,57 +28,39 @@ oth_genes <- c("MPO", "CD34", "CD79B", "GATA1", "IRF8", "CD41", "EPOR", "EPOR", 
 
 # all_file_names
 all_file_names <- list.files(paste0(prefixIn))
-all_file_names2 <- list.files(paste0(prefixIn2))
 all_file_names <- grep(all_file_names, pattern = ".h5seurat", value = T)
-all_file_names2 <- grep(all_file_names2, pattern = "PHATE3.tsv", value = T)
 
 # Distribute filenames
-rep1_names <- grep(all_file_names, pattern = "rep1", value = T) # Male-35
-rep1_names2 <- grep(all_file_names2, pattern = "rep1", value = T) # Male-35
-rep2_names <- grep(all_file_names, pattern = "rep2", value = T) # Female-28
-rep2_names2 <- grep(all_file_names2, pattern = "rep2", value = T) # Female-28
-rep3_names <- grep(all_file_names, pattern = "rep3", value = T) # Female-19
-rep3_names2 <- grep(all_file_names2, pattern = "rep3", value = T) # Female-19
+aml17_names <- grep(all_file_names, pattern = "aml17", value = T) # Male-35
+mds17_names <- grep(all_file_names, pattern = "mds17", value = T) # Female-28
 
 # Make a list of filenames
 rep_list <- list(
-  rep1 = c(rep1_names, rep1_names2),
-  rep2 = c(rep2_names, rep2_names2),
-  rep3 = c(rep3_names, rep3_names2)
+  aml17 = aml17_names,
+  mds17 = mds17_names
 )
 
 # Run for every dataset
 for (i in names(rep_list)) {
   print(i)
-
-  if (i == "rep1") {
-    individual <- "1"
-    age <- "35"
-    sex <- "Male"
-    umap_min_dist <- 0.8
+  if (i == "mds17") {
+    patientID <- "17"
+    condition <- "MDS"
+    umap_min_dist <- 0.1
     umap.n_neighbors <- 15
-    wd <- 9
+    wd <- 15
     res <- 0.002
-  } else if (i == "rep2") {
-    individual <- "2"
-    age <- "28"
-    sex <- "Female"
-    umap_min_dist <- 0.9
-    umap.n_neighbors <- 25
-    wd <- 9
-    res <- 0.005
-  } else if (i == "rep3") {
-    individual <- "3"
-    age <- "19"
-    sex <- "Female"
-    umap_min_dist <- 0.8
+  } else if (i == "aml17") {
+    patientID <- "17"
+    condition <- "sAML"
+    umap_min_dist <- 0.1
     umap.n_neighbors <- 15
     wd <- 15
     res <- 0.002
   }
 
   # Get the names rep#
-  rep_i_name <- rep_list[[i]][1]
+  rep_i_name <- rep_list[[i]]
 
   #  the Processed Seurat Object
   sob <- LoadH5Seurat(file = paste0(prefixIn, rep_i_name), verbose = F)
@@ -107,19 +87,19 @@ for (i in names(rep_list)) {
     reduction_method = "UMAP", cell_size = 0.5,
     color_cells_by = "cell.type", label_cell_groups = F
   ) +
-    scale_color_brewer(palette = "Dark2") +
-    ggtitle(paste("Individual:", individual, "Age:", age, " Sex:", sex)) +
+    # scale_color_brewer(palette = "Set1") +
+    ggtitle(paste0("PatientID: ", patientID, " Condition: ", condition)) +
     theme(
       plot.margin = margin(0.2, 0.2, 0, 0, "cm"),
       legend.position = "bottom", axis.text = element_text(size = rel(1)), legend.title = element_blank(),
       axis.title = element_text(size = rel(1)), legend.text = element_text(size = rel(1)),
-      legend.key.size = unit(0.5, "cm"), plot.title = element_text(size = rel(1))
+      legend.key.size = unit(0.1, "cm"), plot.title = element_text(size = rel(1))
     ) +
-    guides(colour = guide_legend(override.aes = list(size = rel(6))))
+    guides(colour = guide_legend(override.aes = list(size = rel(4))))
   dir.create(paste0(prefixOut, "/UMAP"), showWarnings = FALSE)
   ggsave(p,
     filename = paste0(prefixOut, "/UMAP/", i, "_UMAP.png"),
-    dpi = 1300, limitsize = FALSE
+    dpi = 1300, limitsize = FALSE, width = 7
   )
 
   # Perform Liden Clustering
@@ -136,7 +116,7 @@ for (i in names(rep_list)) {
     color_cells_by = "cluster", label_cell_groups = F
   ) +
     scale_color_brewer(palette = "Set1") +
-    ggtitle(paste("Individual:", individual, "Age:", age, " Sex:", sex)) +
+    ggtitle(paste0("PatientID: ", patientID, " Condition: ", condition)) +
     theme(
       plot.margin = margin(0.2, 0.2, 0, 0, "cm"),
       legend.position = "bottom", axis.text = element_text(size = rel(1)), legend.title = element_blank(),
@@ -158,8 +138,8 @@ for (i in names(rep_list)) {
     reduction_method = "UMAP", cell_size = 0.5,
     color_cells_by = "cell.type", label_cell_groups = F
   ) +
-    scale_color_brewer(palette = "Dark2") +
-    ggtitle(paste("Individual:", individual, "Age:", age, " Sex:", sex)) +
+    # scale_color_brewer(palette = "Dark2") +
+    ggtitle(paste0("PatientID: ", patientID, " Condition: ", condition)) +
     theme(
       plot.margin = margin(0.2, 0.2, 0, 0, "cm"),
       legend.position = "bottom", axis.text = element_text(size = rel(1)), legend.title = element_blank(),
@@ -175,9 +155,7 @@ for (i in names(rep_list)) {
 
   # Order cells
   cds <- order_cells(cds, root_cells = rownames(
-    colData(cds)[(colData(cds)$cell.type == "HSC" &
-      colData(cds)$predicted.celltype.l2.score > 0.9 &
-      colData(cds)$mapping.score > 0.9), ]
+    colData(cds)[colData(cds)$cell.type == "HSC", ]
   ))
 
   # Plotting Monocle3 UMAP
@@ -188,7 +166,7 @@ for (i in names(rep_list)) {
     label_roots = T, label_principal_points = F
   ) +
     scale_color_viridis(option = "C") +
-    ggtitle(paste("Individual:", individual, "Age:", age, " Sex:", sex)) +
+    ggtitle(paste0("PatientID: ", patientID, " Condition: ", condition)) +
     theme(
       plot.margin = margin(0.2, 0.2, 0, 0, "cm"),
       legend.position = "bottom", axis.text = element_text(size = rel(1)), legend.title = element_blank(),
@@ -208,8 +186,7 @@ for (i in names(rep_list)) {
   )
 
   # Save the Object
-  dir.create(paste0(prefixOut, "/Monocle3UMAPOB"), showWarnings = FALSE)
-  saveRDS(cds, paste0(prefixOut, "/Monocle3UMAPOB/", i, "_m3_UMAP_OB.RDS"))
+  saveRDS(cds, paste0(prefixOut, i, "_m3_UMAP_OB.RDS"))
 
   cat(paste0("\nCompleted for ", i, "\n"))
 }

@@ -3,4 +3,6 @@
 .RData
 .Ruserdata
 setty_et_al/data/*
+guess_et_al/scripts/data/*
+setty_et_al/scripts/.ipynb_checkpoints/
 guess_et_al/data/*

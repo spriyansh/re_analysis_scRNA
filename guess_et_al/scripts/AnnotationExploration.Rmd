@@ -1,0 +1,61 @@
+---
+title: "Exploration of AnnotationsR Notebook"
+output: html_document
+---
+
+```{r}
+suppressPackageStartupMessages(library(Seurat))
+suppressPackageStartupMessages(library(SeuratData))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(SingleR))
+suppressPackageStartupMessages(library(SeuratDisk))
+```
+
+```{r}
+mds.sob <- LoadH5Seurat("../data/output/p17/SingleR/mds17_Annotated_sob.h5seurat")
+aml.sob <- LoadH5Seurat("../data/output/p17/SingleR/aml17_Annotated_sob.h5seurat")
+```
+
+```{r}
+mds.meta <- mds.sob@meta.data
+aml.meta <- aml.sob@meta.data
+meta <- rbind(mds.meta, aml.meta)
+cell_annotations <- meta %>% select(c(Azimuth.Cells, SingleR.Cells, orig.ident))
+colnames(cell_annotations) <- c("Azimuth", "SingleR", "State")
+```
+
+```{r}
+cp <- ggplot(data = cell_annotations, aes(x = Azimuth, y = SingleR, color = State)) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(~ State) +
+  labs(x = "Azimuth", y = "SingleR") +
+  theme_minimal() +   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave(cp, 
+       filename = "/home/priyansh/gitDockers/re_analysis_scRNA/guess_et_al/data/output/p17/SingleR/Connection_Plot.png", dpi = 1000, limitsize = F, width = 14, height = 7)
+```
+
+
+```{r}
+# Load Healthy Seurat
+healthy.sob.rep3 <- LoadH5Seurat("../../setty_et_al/data/output/Azimuth/rep3_Annotated_sob.h5seurat")
+cellDex <- readRDS("../data/input/CellDex_NovershternHematopoieticData.RDS")
+SingleR_labels <- SingleR(test = GetAssayData(healthy.sob.rep3, slot = "data"),
+                              ref = cellDex,
+                              labels = cellDex$label.main)
+
+healthy.meta <- healthy.sob.rep3@meta.data
+
+healthy.meta$singleR <- SingleR_labels$labels
+healthy.meta <- healthy.meta %>% select(c(cell.type, singleR))
+colnames(healthy.meta) <- c("Azimuth", "SingleR")
+
+ggplot(data = healthy.meta, aes(x = Azimuth, y = SingleR)) +
+  geom_point() +
+  geom_line() +
+    ggtitle("Individual 3 form Setty et al")+
+  labs(x = "Azimuth", y = "SingleR") +
+  theme_minimal() +   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
