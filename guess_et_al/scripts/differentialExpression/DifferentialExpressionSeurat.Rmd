@@ -1,0 +1,173 @@
+---
+title: "Differential Expression Analysis"
+subtitle: "Analysis with Seurat"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r, echo=FALSE, eval=TRUE, message=F, warning=F}
+library(Seurat)
+library(SeuratData)
+library(SeuratDisk)
+library(tidyverse)
+library(ggalluvial)
+library(ggpubr)
+
+# Loacation of Seurat Object
+inputLoc <- "../../data/output/p17/SingleR/"
+
+# Location of output
+outputLoc <- "../../data/output/p17/DifferentialExpression/" 
+
+# Dimplot themes
+dimPlotTheme <- theme_minimal() + theme(legend.position = "bottom")
+```
+
+
+## Load seurat dataset
+```{r, echo=TRUE, eval=TRUE, message=F, warning=F}
+# Sample
+fileName <- "mds17_Annotated_sob.h5seurat" 
+
+# Load the Annoated Dataset
+sob <- LoadH5Seurat(paste0(inputLoc, fileName), verbose = F)
+
+# Sample View
+sob
+```
+
+## Plot avaible cell types
+```{r, echo=TRUE, eval=TRUE, message=F, warning=F, fig.width=10}
+# Colour by condition
+azimuth.cell.p <- DimPlot(sob, group.by = "Azimuth.Cells", pt.size = 1) +
+    ggtitle(paste0("PatientID: 17, Condition: MDS, Annotation: Azimuth")) +
+     scale_color_hue(l = 50)+
+    dimPlotTheme
+
+singleR.cell.p <- DimPlot(sob, group.by = "SingleR.Cells", pt.size = 1, ) +
+    ggtitle(paste0("PatientID: 17, Condition: MDS, Annotation: SingleR")) +
+     scale_color_hue(l = 50)+
+    dimPlotTheme
+
+# Plot
+azimuth.cell.p + singleR.cell.p
+```
+
+## Extract Cell Types from HSC Compartment Based on Azimuth
+```{r, echo=TRUE, eval=TRUE, message=F, warning=F, fig.width=10}
+# Extract cell types
+annoFrame <- data.frame(Azimuth = as.factor(sob@meta.data$Azimuth.Cells),
+                        SingleR = as.factor(sob@meta.data$SingleR.Cells),
+                        barcodes = rownames(sob@meta.data),
+                        row.names = rownames(sob@meta.data))
+
+# Subset
+annoFrameSub <- annoFrame %>% filter(Azimuth %in% c("HSC", "LMPP", "GMP"))
+```
+
+## Compare Annotation
+```{r, echo=TRUE, eval=TRUE, message=F, warning=F, fig.height=6, fig.width=6}
+#create an aggregated dataframe
+df_aggregate <- annoFrameSub %>%
+  group_by(Azimuth, SingleR) %>%
+  summarise(n = n(), .groups = "keep") 
+
+#plot sankey diagram
+ggplot(data = df_aggregate,
+       aes(axis1 = Azimuth, axis2 = SingleR, y = n)) +
+  scale_x_discrete(limits = c("Azimuth Labels", "SingleR Labels"), expand = c(.1, .05)) +
+  xlab("Factors") +
+  geom_alluvium(aes(fill = Azimuth)) +
+  geom_stratum() + 
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)), ) +
+  theme_minimal() +
+  ggtitle("Comparison of Annotation b/w Azimuth and SingleR")
+```
+
+## Subset the seurat object
+```{r, echo=TRUE, eval=TRUE, message=F, warning=F}
+# Subset
+sob.sub <- subset(sob, subset = Azimuth.Cells %in% c("HSC", "LMPP", "GMP"))
+sob.sub$barcodes <- rownames(sob.sub@meta.data)
+
+azimuth.cell.sub <- DimPlot(sob.sub, group.by = "Azimuth.Cells", pt.size = 1) +
+    ggtitle(paste0("PatientID: 17", " Condition: MDS",  " Annotation: Azimuth")) +
+     scale_color_hue(l = 50)+
+    dimPlotTheme
+
+# Plot
+azimuth.cell.sub
+sob.sub
+
+# Remove outlier cells
+keep.cells <- rownames(
+    azimuth.cell.sub$data[azimuth.cell.sub$data$UMAP_1 > -4 & azimuth.cell.sub$data$UMAP_1 < 0.1,])
+sob.sub <- subset(sob.sub, subset = barcodes %in% keep.cells)
+
+# Recheck
+azimuth.cell.sub <- DimPlot(sob.sub, group.by = "Azimuth.Cells", pt.size = 1) +
+    ggtitle(paste0("PatientID: 17", " Condition: MDS",  " Annotation: Azimuth")) +
+     scale_color_hue(l = 50)+
+    dimPlotTheme
+
+# Plot
+azimuth.cell.sub
+```
+
+## Differential Expression with FindMarkers() among cell types
+```{r, echo=TRUE, eval=TRUE, message=F, warning=F}
+# Set Identity
+sob.sub <- SetIdent(sob.sub, value = "Azimuth.Cells")
+
+# Run all combinations
+hsc.vs.lmpp <- FindMarkers(sob.sub, ident.1 = "HSC", ident.2 = "LMPP", verbose = F)
+hsc.vs.GMP <- FindMarkers(sob.sub, ident.1 = "HSC", ident.2 = "GMP", verbose = F)
+lmpp.vs.GMP <- FindMarkers(sob.sub, ident.1 = "LMPP", ident.2 = "GMP", verbose = F)
+
+# Calculate Volcano
+volcano.list <- lapply(list(hsc.vs.lmpp, hsc.vs.GMP, lmpp.vs.GMP), function(df){
+    p_val_threshold <- 0.05
+    log2FC_threshold <- 1
+    df <- df %>%
+    mutate(sig = if_else(p_val_adj < p_val_threshold & abs(avg_log2FC) > log2FC_threshold, "Significant", "Not significant"))
+    ggplot(df, aes(x = avg_log2FC, y = -log10(p_val_adj), color = sig)) +
+    geom_point() +
+    geom_vline(xintercept = c(-log2FC_threshold, log2FC_threshold), linetype = "dashed") +
+    geom_hline(yintercept = -log10(p_val_threshold), linetype = "dashed") +
+    scale_color_manual(values = c("Significant" = "red", "Not significant" = "black")) +
+    labs(x = "log2 fold change",
+         y = "-log10 adjusted p-value",
+         color = "Significance") +
+    theme_minimal() + theme(legend.position = "none")
+})
+names(volcano.list) <- c("HSC vs LMPP", "HSC vs GMP", "LMPP vs GMP")
+
+ggarrange(volcano.list[[1]], volcano.list[[2]], volcano.list[[3]],
+          labels = names(volcano.list), ncol = 3)
+```
+
+```{r}
+
+for (i in rownames(volcano.list[[1]]$data[volcano.list[[1]]$data$sig != "Not significant",])){
+    y <- VlnPlot(sob.sub, features = i)
+    dir.create(paste0(outputLoc, "HSCvsLMPP"), showWarnings = F)
+    ggsave(y, filename = paste0(outputLoc, "HSCvsLMPP/", i, "_HSCvsLMPP.png"),
+           dpi = 600, limitsize = FALSE, width = 6, height = 6)
+}
+
+for (i in rownames(volcano.list[[2]]$data[volcano.list[[2]]$data$sig != "Not significant",])){
+    y <- VlnPlot(sob.sub, features = i)
+    dir.create(paste0(outputLoc, "HSCvsGMP"), showWarnings = F)
+    ggsave(y, filename = paste0(outputLoc, "HSCvsGMP/",i, "_HSCvsGMP.png"),
+           dpi = 600, limitsize = FALSE, width = 6, height = 6)
+}
+
+for (i in rownames(volcano.list[[3]]$data[volcano.list[[3]]$data$sig != "Not significant",])){
+    y <- VlnPlot(sob.sub, features = i)
+    dir.create(paste0(outputLoc, "LMPPvsGMP"), showWarnings = F)
+    ggsave(y, filename = paste0(outputLoc, "LMPPvsGMP/",i, "_LMPPvsGMP.png"),
+           dpi = 600, limitsize = FALSE, width = 6, height = 6)
+}
+
+```
